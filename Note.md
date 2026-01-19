@@ -2,11 +2,66 @@
 
 撰寫專案需要的技術說明
 
-### Zustand
+### 前端 tech stack
 
-Zustand 使用 **store** 來管理狀態，你可以直接從 store 讀取或修改狀態，而 React 元件會自動訂閱相關狀態，當狀態變化時自動更新。
+- **React 19.2.0** - 主要 UI 框架
+- **React DOM 19.2.0** - DOM 渲染
+- **React Router DOM 7.12.0** - 路由管理
 
-總結來說，Zustand 是 **簡單、高效、靈活的 React 狀態管理方案**，非常適合中小型專案或希望避免 Redux 繁瑣配置的場景。
+### 狀態管理
+
+- **Zustand 5.0.10** - 輕量級狀態管理 (替代 Redux)
+
+  Zustand 使用 **store** 來管理狀態，你可以直接從 store 讀取或修改狀態，而 React 元件會自動訂閱相關狀態，當狀態變化時自動更新。
+
+  總結來說，Zustand 是 **簡單、高效、靈活的 React 狀態管理方案**，非常適合中小型專案或希望避免 Redux 繁瑣配置的場景。
+
+### 數據獲取
+
+- **TanStack React Query 5.90.17** - 服務端狀態管理和數據獲取
+
+### 國際化
+
+- **i18next 25.7.4** - 國際化核心
+- **React-i18next 16.5.3** - React 的 i18n 整合
+
+## 開發工具鏈 🛠️
+
+### 建置工具
+
+- **Vite 7.2.4** - 現代前端建置工具 (快速 HMR)
+- **TypeScript 5.9.3** - 類型安全的 JavaScript
+
+### 代碼品質
+
+- **ESLint 9.39.1** - 代碼檢查
+- **TypeScript ESLint 8.46.4** - TS 專用 lint 規則
+
+## 樣式方案 🎨
+
+### CSS 方案
+
+- **原生 CSS** - 沒有使用 UI 框架
+- **CSS Variables** - 使用 CSS 自定義屬性做主題
+- **自定義樣式系統** - 從 [App.css](vscode-file://vscode-app/c:/Users/AmandaChou/AppData/Local/Programs/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 看到自製的樣式系統
+
+## 特色 ✨
+
+**輕量級選擇**:
+
+- ✅ 沒有使用重量級 UI 框架 (如 Material-UI, Ant Design)
+- ✅ 使用 Zustand 而非 Redux (更簡潔)
+- ✅ 使用 TanStack Query 做數據管理
+- ✅ Vite 提供快速開發體驗
+
+**現代化技術棧**:
+
+- ✅ React 19 (最新版)
+- ✅ TypeScript 支援
+- ✅ 模組化 CSS
+- ✅ 國際化支援
+
+這是一個現代化、輕量級的技術棧，注重性能和開發體驗！
 
 ### SQLite CGO
 
