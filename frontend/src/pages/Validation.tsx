@@ -6,10 +6,10 @@ import type { ValidationConfig, ValidationResult } from '../types';
 export default function Validation() {
   const { t } = useTranslation();
   const [sourceConnString, setSourceConnString] = useState(
-    'sqlserver://username:password@localhost:1433?database=mydb'
+    'sqlserver://username:password@localhost:1433'
   );
   const [targetConnString, setTargetConnString] = useState(
-    'postgres://username:password@localhost:5432/mydb?sslmode=disable'
+    'postgres://username:password@localhost:5432?sslmode=disable'
   );
   const [config, setConfig] = useState<ValidationConfig>({
     migrationId: '',

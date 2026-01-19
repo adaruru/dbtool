@@ -27,6 +27,17 @@ export interface ConnectionHistory {
   createdAt: string;
 }
 
+// In-memory record of a successfully tested connection
+// (mirrors ConnectionHistory but may not be persisted).
+export interface TestedConnection {
+  id: string;
+  connectionString: string;
+  connectionType: ConnectionType;
+  testResult: ConnectionTestResult;
+  selectedDatabase: string;
+  createdAt: string;
+}
+
 // Table types
 export interface TableInfo {
   schema: string;

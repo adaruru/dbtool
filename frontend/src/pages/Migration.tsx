@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMigrationStore } from '../stores/migrationStore';
 import { useConnectionStore } from '../stores/connectionStore';
-import type { MigrationConfig } from '../types';
+import type { MigrationConfig, ConnectionHistory } from '../types';
 
 export default function Migration() {
   const { t } = useTranslation();
@@ -24,14 +24,20 @@ export default function Migration() {
     clearError
   } = useMigrationStore();
 
-  const { sourceTestResult, targetTestResult } = useConnectionStore();
+  const {
+    sourceTestResult,
+    targetTestResult,
+    testedConnections,
+    connectionHistories,
+    loadConnectionHistories
+  } = useConnectionStore();
 
   const [migrationName, setMigrationName] = useState('');
   const [sourceConnString, setSourceConnString] = useState(
-    'sqlserver://username:password@localhost:1433?database=mydb'
+    'sqlserver://username:password@localhost:1433'
   );
   const [targetConnString, setTargetConnString] = useState(
-    'postgres://username:password@localhost:5432/mydb?sslmode=disable'
+    'postgres://username:password@localhost:5432?sslmode=disable'
   );
   const [sourceDatabase, setSourceDatabase] = useState('');
   const [targetDatabase, setTargetDatabase] = useState('');
@@ -45,15 +51,72 @@ export default function Migration() {
     dropTargetIfExists: false,
     batchSize: 10000
   });
+  const [sourceSelectionId, setSourceSelectionId] = useState('');
+  const [targetSelectionId, setTargetSelectionId] = useState('');
 
   useEffect(() => {
-    if (sourceTestResult?.databases && sourceTestResult.databases.length > 0) {
+    loadConnectionHistories();
+  }, [loadConnectionHistories]);
+
+  useEffect(() => {
+    if (!sourceDatabase && sourceTestResult?.databases && sourceTestResult.databases.length > 0) {
       setSourceDatabase(sourceTestResult.databases[0]);
     }
-    if (targetTestResult?.databases && targetTestResult.databases.length > 0) {
+    if (!targetDatabase && targetTestResult?.databases && targetTestResult.databases.length > 0) {
       setTargetDatabase(targetTestResult.databases[0]);
     }
-  }, [sourceTestResult, targetTestResult]);
+  }, [sourceTestResult, targetTestResult, sourceDatabase, targetDatabase]);
+
+  const successfulConnections = useMemo(() => {
+    const map = new Map<string, ConnectionHistory>();
+
+    [...testedConnections, ...connectionHistories].forEach((conn) => {
+      if (!conn.testResult?.success) return;
+      const key = `${conn.connectionType}-${conn.connectionString}`;
+      if (map.has(key)) return;
+
+      map.set(key, {
+        ...conn,
+        selectedDatabase:
+          conn.selectedDatabase ||
+          conn.testResult.databases?.[0] ||
+          ''
+      });
+    });
+
+    return Array.from(map.values());
+  }, [testedConnections, connectionHistories]);
+
+  const sourceOptions = successfulConnections.filter((conn) => conn.connectionType === 'mssql');
+  const targetOptions = successfulConnections.filter((conn) => conn.connectionType === 'postgres');
+
+  const handleSelectSourceConnection = (id: string) => {
+    setSourceSelectionId(id);
+    if (!id) {
+      setSourceConnString('');
+      setSourceDatabase('');
+      return;
+    }
+    const conn = successfulConnections.find((c) => c.id === id);
+    if (conn) {
+      setSourceConnString(conn.connectionString);
+      setSourceDatabase(conn.selectedDatabase || conn.testResult.databases?.[0] || '');
+    }
+  };
+
+  const handleSelectTargetConnection = (id: string) => {
+    setTargetSelectionId(id);
+    if (!id) {
+      setTargetConnString('');
+      setTargetDatabase('');
+      return;
+    }
+    const conn = successfulConnections.find((c) => c.id === id);
+    if (conn) {
+      setTargetConnString(conn.connectionString);
+      setTargetDatabase(conn.selectedDatabase || conn.testResult.databases?.[0] || '');
+    }
+  };
 
   const handleLoadTables = async () => {
     if (!sourceDatabase) {
@@ -141,45 +204,38 @@ export default function Migration() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
               <div>
-                <label className="block mb-2 font-medium text-text-secondary">{t('migration.sourceConnString')}</label>
-                <input
-                  type="text"
-                  value={sourceConnString}
-                  onChange={(e) => setSourceConnString(e.target.value)}
+                <label className="block mb-2 font-medium text-text-secondary">
+                  {t('migration.sourceConnString')}
+                </label>
+                <select
+                  value={sourceSelectionId}
+                  onChange={(e) => handleSelectSourceConnection(e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-md bg-card-bg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                />
+                >
+                  <option value="">-- 從成功連線挑選來源 --</option>
+                  {sourceOptions.map((conn) => (
+                    <option key={conn.id} value={conn.id}>
+                      {`${conn.selectedDatabase || '(未選資料庫)'} : ${conn.connectionString}`}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="block mb-2 font-medium text-text-secondary">{t('migration.sourceDatabase')}</label>
-                <input
-                  type="text"
-                  value={sourceDatabase}
-                  onChange={(e) => setSourceDatabase(e.target.value)}
-                  placeholder={t('migration.databasePlaceholder')}
+                <label className="block mb-2 font-medium text-text-secondary">
+                  {t('migration.targetConnString')}
+                </label>
+                <select
+                  value={targetSelectionId}
+                  onChange={(e) => handleSelectTargetConnection(e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-md bg-card-bg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-              <div>
-                <label className="block mb-2 font-medium text-text-secondary">{t('migration.targetConnString')}</label>
-                <input
-                  type="text"
-                  value={targetConnString}
-                  onChange={(e) => setTargetConnString(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-card-bg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>
-              <div>
-                <label className="block mb-2 font-medium text-text-secondary">{t('migration.targetDatabase')}</label>
-                <input
-                  type="text"
-                  value={targetDatabase}
-                  onChange={(e) => setTargetDatabase(e.target.value)}
-                  placeholder={t('migration.databasePlaceholder')}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-card-bg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                />
+                >
+                  <option value="">-- 從成功連線挑選目標 --</option>
+                  {targetOptions.map((conn) => (
+                    <option key={conn.id} value={conn.id}>
+                      {`${conn.selectedDatabase || '(未選資料庫)'} : ${conn.connectionString}`}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
