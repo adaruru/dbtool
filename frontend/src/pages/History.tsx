@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMigrationStore } from '../stores/migrationStore';
 
 export default function History() {
+  const { t, i18n } = useTranslation();
   const { history, logs, loadHistory, loadLogs } = useMigrationStore();
   const [selectedMigration, setSelectedMigration] = useState<string | null>(null);
 
@@ -32,17 +34,17 @@ export default function History() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'completed':
-        return '已完成';
+        return t('history.statusCompleted');
       case 'failed':
-        return '失敗';
+        return t('history.statusFailed');
       case 'running':
-        return '執行中';
+        return t('history.statusRunning');
       case 'paused':
-        return '已暫停';
+        return t('history.statusPaused');
       case 'cancelled':
-        return '已取消';
+        return t('history.statusCancelled');
       case 'pending':
-        return '待處理';
+        return t('history.statusPending');
       default:
         return status;
     }
@@ -50,20 +52,20 @@ export default function History() {
 
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('zh-TW');
+    return new Date(dateStr).toLocaleString(i18n.language === 'zh-TW' ? 'zh-TW' : 'en-US');
   };
 
   return (
     <div className="history-page">
-      <h1>歷史紀錄</h1>
+      <h1>{t('history.title')}</h1>
 
       <div className="history-container">
         {/* Migration List */}
         <div className="migration-list">
-          <h2>遷移紀錄</h2>
+          <h2>{t('history.migrationRecords')}</h2>
           {history.length === 0 ? (
             <div className="empty-state">
-              <p>尚無遷移紀錄</p>
+              <p>{t('history.noRecords')}</p>
             </div>
           ) : (
             <div className="list">
@@ -74,7 +76,7 @@ export default function History() {
                   onClick={() => handleSelectMigration(migration.id)}
                 >
                   <div className="migration-header">
-                    <span className="name">{migration.name || '未命名'}</span>
+                    <span className="name">{migration.name || t('history.unnamed')}</span>
                     <span className={`status ${getStatusClass(migration.status)}`}>
                       {getStatusText(migration.status)}
                     </span>
@@ -84,10 +86,10 @@ export default function History() {
                   </div>
                   <div className="migration-stats">
                     <span>
-                      {migration.completedTables}/{migration.totalTables} 資料表
+                      {migration.completedTables}/{migration.totalTables} {t('history.tables')}
                     </span>
                     <span>
-                      {migration.migratedRows.toLocaleString()}/{migration.totalRows.toLocaleString()} 筆
+                      {migration.migratedRows.toLocaleString()}/{migration.totalRows.toLocaleString()} {t('history.rows')}
                     </span>
                   </div>
                   <div className="migration-time">
@@ -101,14 +103,14 @@ export default function History() {
 
         {/* Log Detail */}
         <div className="log-detail">
-          <h2>詳細日誌</h2>
+          <h2>{t('history.detailLogs')}</h2>
           {!selectedMigration ? (
             <div className="empty-state">
-              <p>選擇一個遷移紀錄以查看日誌</p>
+              <p>{t('history.selectToViewLogs')}</p>
             </div>
           ) : logs.length === 0 ? (
             <div className="empty-state">
-              <p>此遷移沒有日誌紀錄</p>
+              <p>{t('history.noLogs')}</p>
             </div>
           ) : (
             <div className="logs-list">

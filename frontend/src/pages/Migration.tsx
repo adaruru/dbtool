@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMigrationStore } from '../stores/migrationStore';
 import { useConnectionStore } from '../stores/connectionStore';
 import type { MigrationConfig } from '../types';
 
 export default function Migration() {
+  const { t } = useTranslation();
   const {
     tables,
     selectedTables,
@@ -55,7 +57,7 @@ export default function Migration() {
 
   const handleLoadTables = async () => {
     if (!sourceDatabase) {
-      alert('請先選擇來源資料庫');
+      alert(t('migration.alertSelectSource'));
       return;
     }
     try {
@@ -67,11 +69,11 @@ export default function Migration() {
 
   const handleStartMigration = async () => {
     if (!migrationName.trim()) {
-      alert('請輸入遷移名稱');
+      alert(t('migration.alertEnterName'));
       return;
     }
     if (selectedTables.length === 0) {
-      alert('請至少選擇一個資料表');
+      alert(t('migration.alertSelectTable'));
       return;
     }
 
@@ -111,7 +113,7 @@ export default function Migration() {
 
   return (
     <div className="migration-page">
-      <h1>資料遷移</h1>
+      <h1>{t('migration.title')}</h1>
 
       {error && (
         <div className="error-banner">
@@ -124,23 +126,23 @@ export default function Migration() {
         <>
           {/* Configuration Section */}
           <div className="config-section">
-            <h2>遷移設定</h2>
+            <h2>{t('migration.configTitle')}</h2>
 
             <div className="form-row">
               <div className="form-group">
-                <label>遷移名稱</label>
+                <label>{t('migration.migrationName')}</label>
                 <input
                   type="text"
                   value={migrationName}
                   onChange={(e) => setMigrationName(e.target.value)}
-                  placeholder="例如：Production DB Migration"
+                  placeholder={t('migration.migrationNamePlaceholder')}
                 />
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>來源連線字串 (MSSQL)</label>
+                <label>{t('migration.sourceConnString')}</label>
                 <input
                   type="text"
                   value={sourceConnString}
@@ -148,19 +150,19 @@ export default function Migration() {
                 />
               </div>
               <div className="form-group">
-                <label>來源資料庫</label>
+                <label>{t('migration.sourceDatabase')}</label>
                 <input
                   type="text"
                   value={sourceDatabase}
                   onChange={(e) => setSourceDatabase(e.target.value)}
-                  placeholder="資料庫名稱"
+                  placeholder={t('migration.databasePlaceholder')}
                 />
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>目標連線字串 (PostgreSQL)</label>
+                <label>{t('migration.targetConnString')}</label>
                 <input
                   type="text"
                   value={targetConnString}
@@ -168,12 +170,12 @@ export default function Migration() {
                 />
               </div>
               <div className="form-group">
-                <label>目標資料庫</label>
+                <label>{t('migration.targetDatabase')}</label>
                 <input
                   type="text"
                   value={targetDatabase}
                   onChange={(e) => setTargetDatabase(e.target.value)}
-                  placeholder="資料庫名稱"
+                  placeholder={t('migration.databasePlaceholder')}
                 />
               </div>
             </div>
@@ -187,7 +189,7 @@ export default function Migration() {
                     setOptions({ ...options, includeSchema: e.target.checked })
                   }
                 />
-                遷移 Schema (資料表結構)
+                {t('migration.includeSchema')}
               </label>
               <label className="checkbox">
                 <input
@@ -197,7 +199,7 @@ export default function Migration() {
                     setOptions({ ...options, includeData: e.target.checked })
                   }
                 />
-                遷移資料
+                {t('migration.includeData')}
               </label>
               <label className="checkbox">
                 <input
@@ -207,7 +209,7 @@ export default function Migration() {
                     setOptions({ ...options, includeViews: e.target.checked })
                   }
                 />
-                包含 Views
+                {t('migration.includeViews')}
               </label>
               <label className="checkbox">
                 <input
@@ -217,7 +219,7 @@ export default function Migration() {
                     setOptions({ ...options, includeProcedures: e.target.checked })
                   }
                 />
-                包含 Stored Procedures
+                {t('migration.includeProcedures')}
               </label>
               <label className="checkbox">
                 <input
@@ -227,7 +229,7 @@ export default function Migration() {
                     setOptions({ ...options, includeFunctions: e.target.checked })
                   }
                 />
-                包含 Functions
+                {t('migration.includeFunctions')}
               </label>
               <label className="checkbox">
                 <input
@@ -237,12 +239,12 @@ export default function Migration() {
                     setOptions({ ...options, dropTargetIfExists: e.target.checked })
                   }
                 />
-                如果目標存在則刪除
+                {t('migration.dropTargetIfExists')}
               </label>
             </div>
 
             <div className="form-group">
-              <label>批次大小 (筆/批)</label>
+              <label>{t('migration.batchSize')}</label>
               <input
                 type="number"
                 value={options.batchSize}
@@ -259,23 +261,23 @@ export default function Migration() {
               onClick={handleLoadTables}
               disabled={loading}
             >
-              {loading ? '載入中...' : '載入資料表'}
+              {loading ? t('migration.loading') : t('migration.loadTables')}
             </button>
           </div>
 
           {/* Table Selection Section */}
           {tables.length > 0 && (
             <div className="tables-section">
-              <h2>選擇要遷移的資料表</h2>
+              <h2>{t('migration.selectTables')}</h2>
               <div className="table-actions">
                 <button className="btn small" onClick={selectAllTables}>
-                  全選
+                  {t('migration.selectAll')}
                 </button>
                 <button className="btn small" onClick={deselectAllTables}>
-                  取消全選
+                  {t('migration.deselectAll')}
                 </button>
                 <span className="selection-count">
-                  已選擇 {selectedTables.length} / {tables.length} 個資料表
+                  {t('migration.selectedCount', { selected: selectedTables.length, total: tables.length })}
                 </span>
               </div>
 
@@ -296,7 +298,7 @@ export default function Migration() {
                       />
                       <span className="table-name">{fullName}</span>
                       <span className="row-count">
-                        {table.rowCount.toLocaleString()} 筆
+                        {table.rowCount.toLocaleString()} {t('migration.rows')}
                       </span>
                     </div>
                   );
@@ -308,7 +310,7 @@ export default function Migration() {
                 onClick={handleStartMigration}
                 disabled={loading || selectedTables.length === 0}
               >
-                開始遷移
+                {t('migration.startMigration')}
               </button>
             </div>
           )}
@@ -318,18 +320,18 @@ export default function Migration() {
       {/* Migration Progress Section */}
       {status && (
         <div className="progress-section">
-          <h2>遷移進度</h2>
+          <h2>{t('migration.progressTitle')}</h2>
 
           <div className="status-bar">
             <span className={`status-badge ${status.Status}`}>
-              {status.Status === 'running' && '執行中'}
-              {status.Status === 'paused' && '已暫停'}
-              {status.Status === 'completed' && '已完成'}
-              {status.Status === 'failed' && '失敗'}
-              {status.Status === 'cancelled' && '已取消'}
+              {status.Status === 'running' && t('migration.statusRunning')}
+              {status.Status === 'paused' && t('migration.statusPaused')}
+              {status.Status === 'completed' && t('migration.statusCompleted')}
+              {status.Status === 'failed' && t('migration.statusFailed')}
+              {status.Status === 'cancelled' && t('migration.statusCancelled')}
             </span>
             <span className="current-table">
-              {status.CurrentTable && `正在處理: ${status.CurrentTable}`}
+              {status.CurrentTable && t('migration.processing', { table: status.CurrentTable })}
             </span>
           </div>
 
@@ -343,13 +345,13 @@ export default function Migration() {
 
           <div className="progress-stats">
             <div className="stat">
-              <label>資料表</label>
+              <label>{t('migration.tables')}</label>
               <span>
                 {status.CompletedTables} / {status.TotalTables}
               </span>
             </div>
             <div className="stat">
-              <label>資料列</label>
+              <label>{t('migration.dataRows')}</label>
               <span>
                 {status.MigratedRows.toLocaleString()} /{' '}
                 {status.TotalRows.toLocaleString()}
@@ -360,29 +362,29 @@ export default function Migration() {
           <div className="migration-controls">
             {isRunning && (
               <button className="btn warning" onClick={pauseMigration}>
-                暫停
+                {t('migration.pause')}
               </button>
             )}
             {isPaused && (
               <button className="btn primary" onClick={resumeMigration}>
-                繼續
+                {t('migration.resume')}
               </button>
             )}
             {(isRunning || isPaused) && (
               <button className="btn danger" onClick={cancelMigration}>
-                取消
+                {t('migration.cancel')}
               </button>
             )}
             {(isCompleted || isFailed) && (
               <a href="#/validation" className="btn primary">
-                前往驗證
+                {t('migration.goToValidation')}
               </a>
             )}
           </div>
 
           {/* Logs */}
           <div className="logs-section">
-            <h3>日誌</h3>
+            <h3>{t('migration.logs')}</h3>
             <div className="logs-container">
               {logs.slice(0, 50).map((log) => (
                 <div key={log.id} className={`log-entry ${log.level}`}>

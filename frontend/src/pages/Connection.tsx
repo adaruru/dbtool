@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useConnectionStore } from '../stores/connectionStore';
 import type { ConnectionTestResult } from '../types';
 
 export default function Connection() {
+  const { t } = useTranslation();
   const {
     sourceTestResult,
     targetTestResult,
@@ -52,15 +54,15 @@ export default function Connection() {
     return (
       <div className={`test-result ${result.success ? 'success' : 'error'}`}>
         <div className="status">
-          {result.success ? '✓ 連線成功' : '✗ 連線失敗'}
+          {result.success ? `✓ ${t('connection.success')}` : `✗ ${t('connection.failed')}`}
         </div>
         <div className="message">{result.message}</div>
         {result.serverVersion && (
-          <div className="version">版本: {result.serverVersion}</div>
+          <div className="version">{t('connection.version')}: {result.serverVersion}</div>
         )}
         {result.databases && result.databases.length > 0 && (
           <div className="databases">
-            <label>選擇資料庫:</label>
+            <label>{t('connection.selectDatabase')}</label>
             <select
               value={type === 'source' ? sourceDatabase : targetDatabase}
               onChange={(e) =>
@@ -83,7 +85,7 @@ export default function Connection() {
 
   return (
     <div className="connection-page">
-      <h1>連線設定</h1>
+      <h1>{t('connection.title')}</h1>
 
       {error && (
         <div className="error-banner">
@@ -95,9 +97,9 @@ export default function Connection() {
       <div className="connection-panels">
         {/* Source Connection */}
         <div className="connection-panel">
-          <h2>來源資料庫 (MSSQL)</h2>
+          <h2>{t('connection.sourceTitle')}</h2>
           <div className="form-group">
-            <label>連線字串</label>
+            <label>{t('connection.connectionString')}</label>
             <textarea
               value={sourceConnString}
               onChange={(e) => setSourceConnString(e.target.value)}
@@ -106,23 +108,23 @@ export default function Connection() {
             />
           </div>
           <div className="help-text">
-            格式: sqlserver://[user]:[password]@[host]:[port]?database=[dbname]
+            {t('connection.sourceFormat')}
           </div>
           <button
             className="btn primary"
             onClick={handleTestSource}
             disabled={loading}
           >
-            {loading ? '測試中...' : '測試連線'}
+            {loading ? t('connection.testing') : t('connection.testConnection')}
           </button>
           {renderTestResult(sourceTestResult, 'source')}
         </div>
 
         {/* Target Connection */}
         <div className="connection-panel">
-          <h2>目標資料庫 (PostgreSQL)</h2>
+          <h2>{t('connection.targetTitle')}</h2>
           <div className="form-group">
-            <label>連線字串</label>
+            <label>{t('connection.connectionString')}</label>
             <textarea
               value={targetConnString}
               onChange={(e) => setTargetConnString(e.target.value)}
@@ -131,14 +133,14 @@ export default function Connection() {
             />
           </div>
           <div className="help-text">
-            格式: postgres://[user]:[password]@[host]:[port]/[dbname]?sslmode=disable
+            {t('connection.targetFormat')}
           </div>
           <button
             className="btn primary"
             onClick={handleTestTarget}
             disabled={loading}
           >
-            {loading ? '測試中...' : '測試連線'}
+            {loading ? t('connection.testing') : t('connection.testConnection')}
           </button>
           {renderTestResult(targetTestResult, 'target')}
         </div>
@@ -146,9 +148,9 @@ export default function Connection() {
 
       {sourceTestResult?.success && targetTestResult?.success && (
         <div className="next-step">
-          <p>兩個連線都已成功測試！</p>
+          <p>{t('connection.bothConnected')}</p>
           <a href="#/migration" className="btn success">
-            前往資料遷移 →
+            {t('connection.goToMigration')}
           </a>
         </div>
       )}

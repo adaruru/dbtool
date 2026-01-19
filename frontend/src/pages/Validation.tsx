@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StartValidation } from '../../wailsjs/go/main/App';
 import type { ValidationConfig, ValidationResult } from '../types';
 
 export default function Validation() {
+  const { t } = useTranslation();
   const [sourceConnString, setSourceConnString] = useState(
     'sqlserver://username:password@localhost:1433?database=mydb'
   );
@@ -52,8 +54,8 @@ export default function Validation() {
 
   return (
     <div className="validation-page">
-      <h1>資料驗證</h1>
-      <p className="subtitle">驗證遷移後的資料完整性</p>
+      <h1>{t('validation.title')}</h1>
+      <p className="subtitle">{t('validation.subtitle')}</p>
 
       {error && (
         <div className="error-banner">
@@ -64,11 +66,11 @@ export default function Validation() {
 
       {results.length === 0 && (
         <div className="validation-config">
-          <h2>驗證設定</h2>
+          <h2>{t('validation.configTitle')}</h2>
 
           <div className="form-row">
             <div className="form-group">
-              <label>來源連線字串 (MSSQL)</label>
+              <label>{t('validation.sourceConnString')}</label>
               <input
                 type="text"
                 value={sourceConnString}
@@ -79,7 +81,7 @@ export default function Validation() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>目標連線字串 (PostgreSQL)</label>
+              <label>{t('validation.targetConnString')}</label>
               <input
                 type="text"
                 value={targetConnString}
@@ -97,7 +99,7 @@ export default function Validation() {
                   setConfig({ ...config, rowCountValidation: e.target.checked })
                 }
               />
-              筆數驗證 (比對資料列數)
+              {t('validation.rowCountValidation')}
             </label>
             <label className="checkbox">
               <input
@@ -107,7 +109,7 @@ export default function Validation() {
                   setConfig({ ...config, checksumValidation: e.target.checked })
                 }
               />
-              Checksum 驗證 (表級別 hash)
+              {t('validation.checksumValidation')}
             </label>
             <label className="checkbox">
               <input
@@ -117,13 +119,13 @@ export default function Validation() {
                   setConfig({ ...config, sampleComparison: e.target.checked })
                 }
               />
-              抽樣比對 (逐筆驗證)
+              {t('validation.sampleComparison')}
             </label>
           </div>
 
           {config.sampleComparison && (
             <div className="form-group">
-              <label>抽樣數量</label>
+              <label>{t('validation.sampleSize')}</label>
               <input
                 type="number"
                 value={config.sampleSize}
@@ -144,33 +146,33 @@ export default function Validation() {
             onClick={handleStartValidation}
             disabled={loading}
           >
-            {loading ? '驗證中...' : '開始驗證'}
+            {loading ? t('validation.validating') : t('validation.startValidation')}
           </button>
         </div>
       )}
 
       {results.length > 0 && (
         <div className="validation-results">
-          <h2>驗證結果</h2>
+          <h2>{t('validation.resultsTitle')}</h2>
 
           <div className="summary">
             <div className="summary-item success">
               <span className="count">
                 {results.filter((r) => r.status === 'success').length}
               </span>
-              <span className="label">通過</span>
+              <span className="label">{t('validation.passed')}</span>
             </div>
             <div className="summary-item warning">
               <span className="count">
                 {results.filter((r) => r.status === 'mismatch').length}
               </span>
-              <span className="label">不一致</span>
+              <span className="label">{t('validation.mismatch')}</span>
             </div>
             <div className="summary-item error">
               <span className="count">
                 {results.filter((r) => r.status === 'error').length}
               </span>
-              <span className="label">錯誤</span>
+              <span className="label">{t('validation.error')}</span>
             </div>
           </div>
 
@@ -178,14 +180,14 @@ export default function Validation() {
             <table>
               <thead>
                 <tr>
-                  <th>狀態</th>
-                  <th>資料表</th>
-                  <th>來源筆數</th>
-                  <th>目標筆數</th>
-                  <th>筆數一致</th>
-                  <th>Checksum 一致</th>
-                  <th>抽樣結果</th>
-                  <th>耗時</th>
+                  <th>{t('validation.status')}</th>
+                  <th>{t('validation.tableName')}</th>
+                  <th>{t('validation.sourceRows')}</th>
+                  <th>{t('validation.targetRows')}</th>
+                  <th>{t('validation.rowCountMatch')}</th>
+                  <th>{t('validation.checksumMatch')}</th>
+                  <th>{t('validation.sampleResult')}</th>
+                  <th>{t('validation.duration')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -212,7 +214,7 @@ export default function Validation() {
           </div>
 
           <button className="btn secondary" onClick={() => setResults([])}>
-            重新驗證
+            {t('validation.revalidate')}
           </button>
         </div>
       )}
