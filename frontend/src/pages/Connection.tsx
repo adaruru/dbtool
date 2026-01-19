@@ -108,19 +108,17 @@ export default function Connection() {
             </select>
           </div>
         )}
-        {result.success && (
-          <button
-            className="btn secondary keep-btn"
-            onClick={() => handleKeepConnection(
-              type === 'source' ? sourceConnString : targetConnString,
-              result,
-              type === 'source' ? sourceDatabase : targetDatabase,
-              type === 'source' ? 'mssql' : 'postgres'
-            )}
-          >
-            {t('connection.keep')}
-          </button>
-        )}
+        <button
+          className="btn secondary keep-btn"
+          onClick={() => handleKeepConnection(
+            type === 'source' ? sourceConnString : targetConnString,
+            result,
+            type === 'source' ? sourceDatabase : targetDatabase,
+            type === 'source' ? 'mssql' : 'postgres'
+          )}
+        >
+          {t('connection.keep')}
+        </button>
       </div>
     );
   };

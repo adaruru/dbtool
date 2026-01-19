@@ -33,7 +33,15 @@ func New() (*Storage, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
-	dbPath := filepath.Join(dataDir, "adaru-db-tool.db")
+	// 根據環境設定不同的資料庫檔名
+	// 正式環境: adaru-db-tool.db
+	// 測試環境: adaru-db-tool-dev.db
+	dbFilename := "adaru-db-tool.db"
+	if os.Getenv("DEBUG") == "1" || os.Getenv("ENVIRONMENT") == "development" {
+		dbFilename = "adaru-db-tool-dev.db"
+	}
+
+	dbPath := filepath.Join(dataDir, dbFilename)
 	db, err := sqlx.Open("sqlite", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -54,10 +62,9 @@ func getDataDir() (string, error) {
 		return "", err
 	}
 
-	// Debug 模式使用子目錄
+	// 直接使用 .adaru-db-tool 目錄
 	baseDir := filepath.Join(homeDir, ".adaru-db-tool")
-	// 一律使用 dev 目錄用於開發和測試
-	return filepath.Join(baseDir, "dev"), nil
+	return baseDir, nil
 }
 
 // migrate runs database migrations
@@ -136,9 +143,15 @@ func (s *Storage) migrate() error {
 			connection_type TEXT NOT NULL CHECK (connection_type IN ('mssql', 'postgres')),
 			test_result_json TEXT NOT NULL,
 			selected_database TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_connect_histories_type ON connect_histories(connection_type)`,
+	}
+
+	// Additional migration for updated_at column
+	additionalMigrations := []string{
+		`ALTER TABLE connect_histories ADD COLUMN updated_at DATETIME;`,
 	}
 
 	for _, migration := range migrations {
@@ -147,7 +160,28 @@ func (s *Storage) migrate() error {
 		}
 	}
 
+	// Handle additional migrations that might fail if column exists
+	for _, migration := range additionalMigrations {
+		if _, err := s.db.Exec(migration); err != nil {
+			// Ignore if column already exists
+			if !isColumnExistsError(err) {
+				return fmt.Errorf("additional migration failed: %w", err)
+			}
+		}
+	}
+
 	return nil
+}
+
+// isColumnExistsError checks if the error is related to column already existing
+func isColumnExistsError(err error) bool {
+	errStr := err.Error()
+	return errStr == "duplicate column name: updated_at" ||
+		errStr == "column already exists" ||
+		errStr == "SQL logic error: duplicate column name: updated_at" ||
+		errStr == "SQL logic error: duplicate column name: updated_at (1)" ||
+		// Handle other variations
+		errStr == "table connect_histories has no column named updated_at"
 }
 
 // Close closes the database connection
@@ -216,21 +250,66 @@ func (s *Storage) DeleteConnection(id string) error {
 
 // SaveConnectionHistory saves a connection test result history
 func (s *Storage) SaveConnectionHistory(connHistory *types.ConnectionHistory) error {
-	if connHistory.ID == "" {
-		connHistory.ID = uuid.New().String()
+	// Check if a record with the same connection string and selected database exists
+	existing, err := s.GetConnectionHistoryByStringAndDatabase(connHistory.ConnectionString, connHistory.SelectedDatabase)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to check existing connection history: %w", err)
 	}
-	connHistory.CreatedAt = time.Now()
 
 	testResultJSON, err := json.Marshal(connHistory.TestResult)
 	if err != nil {
 		return fmt.Errorf("failed to marshal test result: %w", err)
 	}
 
-	_, err = s.db.Exec(`
-		INSERT INTO connect_histories (id, connection_string, connection_type, test_result_json, selected_database, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, connHistory.ID, connHistory.ConnectionString, connHistory.ConnectionType, string(testResultJSON), connHistory.SelectedDatabase, connHistory.CreatedAt)
+	if existing != nil {
+		// Update existing record
+		connHistory.ID = existing.ID
+		connHistory.CreatedAt = existing.CreatedAt // Keep original created time
+		_, err = s.db.Exec(`
+			UPDATE connect_histories 
+			SET connection_type = ?, test_result_json = ?, updated_at = ?
+			WHERE id = ?
+		`, connHistory.ConnectionType, string(testResultJSON), time.Now(), connHistory.ID)
+	} else {
+		// Insert new record
+		if connHistory.ID == "" {
+			connHistory.ID = uuid.New().String()
+		}
+		connHistory.CreatedAt = time.Now()
+		_, err = s.db.Exec(`
+			INSERT INTO connect_histories (id, connection_string, connection_type, test_result_json, selected_database, created_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, connHistory.ID, connHistory.ConnectionString, connHistory.ConnectionType, string(testResultJSON), connHistory.SelectedDatabase, connHistory.CreatedAt)
+	}
 	return err
+}
+
+// GetConnectionHistoryByStringAndDatabase finds a connection history by connection string and selected database
+func (s *Storage) GetConnectionHistoryByStringAndDatabase(connectionString, selectedDatabase string) (*types.ConnectionHistory, error) {
+	var connHistory types.ConnectionHistory
+	var testResultJSON string
+
+	err := s.db.QueryRow(`
+		SELECT id, connection_string, connection_type, test_result_json, selected_database, created_at 
+		FROM connect_histories 
+		WHERE connection_string = ? AND selected_database = ?
+		LIMIT 1
+	`, connectionString, selectedDatabase).Scan(
+		&connHistory.ID, &connHistory.ConnectionString, &connHistory.ConnectionType,
+		&testResultJSON, &connHistory.SelectedDatabase, &connHistory.CreatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, err
+		}
+		return nil, fmt.Errorf("failed to get connection history: %w", err)
+	}
+
+	if err := json.Unmarshal([]byte(testResultJSON), &connHistory.TestResult); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal test result: %w", err)
+	}
+
+	return &connHistory, nil
 }
 
 // GetConnectionHistories retrieves all connection histories

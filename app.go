@@ -36,7 +36,7 @@ func (a *App) startup(ctx context.Context) {
 	if err != nil {
 		// 寫錯誤到檔案以便調試，使用相對路徑和日期檔名
 		if homeDir, e := os.UserHomeDir(); e == nil {
-			logDir := filepath.Join(homeDir, ".adaru-db-tool", "logs")
+			logDir := filepath.Join(homeDir, ".adaru-db-tool")
 			os.MkdirAll(logDir, 0755)
 
 			today := time.Now().Format("2006-01-02")
@@ -53,7 +53,7 @@ func (a *App) startup(ctx context.Context) {
 	} else {
 		// 寫成功訊息到檔案，使用相對路徑和日期檔名
 		if homeDir, e := os.UserHomeDir(); e == nil {
-			logDir := filepath.Join(homeDir, ".adaru-db-tool", "logs")
+			logDir := filepath.Join(homeDir, ".adaru-db-tool")
 			os.MkdirAll(logDir, 0755)
 
 			today := time.Now().Format("2006-01-02")
