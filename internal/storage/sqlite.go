@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Storage provides SQLite storage for migration data
@@ -34,7 +34,7 @@ func New() (*Storage, error) {
 	}
 
 	dbPath := filepath.Join(dataDir, "adaru-db-tool.db")
-	db, err := sqlx.Open("sqlite3", dbPath+"?_foreign_keys=on")
+	db, err := sqlx.Open("sqlite", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -56,11 +56,8 @@ func getDataDir() (string, error) {
 
 	// Debug 模式使用子目錄
 	baseDir := filepath.Join(homeDir, ".adaru-db-tool")
-	if os.Getenv("ADARU_ENV") == "dev" {
-		return filepath.Join(baseDir, "dev"), nil
-	}
-
-	return baseDir, nil
+	// 一律使用 dev 目錄用於開發和測試
+	return filepath.Join(baseDir, "dev"), nil
 }
 
 // migrate runs database migrations
@@ -133,6 +130,15 @@ func (s *Storage) migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_migration_tables_migration_id ON migration_tables(migration_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_migration_logs_migration_id ON migration_logs(migration_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_migration_logs_level ON migration_logs(level)`,
+		`CREATE TABLE IF NOT EXISTS connect_histories (
+			id TEXT PRIMARY KEY,
+			connection_string TEXT NOT NULL,
+			connection_type TEXT NOT NULL CHECK (connection_type IN ('mssql', 'postgres')),
+			test_result_json TEXT NOT NULL,
+			selected_database TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_connect_histories_type ON connect_histories(connection_type)`,
 	}
 
 	for _, migration := range migrations {
@@ -200,9 +206,60 @@ func (s *Storage) UpdateConnectionLastUsed(id string) error {
 	return err
 }
 
-// DeleteConnection deletes a connection
+// DeleteConnection deletes a connection by ID
 func (s *Storage) DeleteConnection(id string) error {
 	_, err := s.db.Exec("DELETE FROM connections WHERE id = ?", id)
+	return err
+}
+
+// Connection History methods
+
+// SaveConnectionHistory saves a connection test result history
+func (s *Storage) SaveConnectionHistory(connHistory *types.ConnectionHistory) error {
+	if connHistory.ID == "" {
+		connHistory.ID = uuid.New().String()
+	}
+	connHistory.CreatedAt = time.Now()
+
+	testResultJSON, err := json.Marshal(connHistory.TestResult)
+	if err != nil {
+		return fmt.Errorf("failed to marshal test result: %w", err)
+	}
+
+	_, err = s.db.Exec(`
+		INSERT INTO connect_histories (id, connection_string, connection_type, test_result_json, selected_database, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, connHistory.ID, connHistory.ConnectionString, connHistory.ConnectionType, string(testResultJSON), connHistory.SelectedDatabase, connHistory.CreatedAt)
+	return err
+}
+
+// GetConnectionHistories retrieves all connection histories
+func (s *Storage) GetConnectionHistories() ([]types.ConnectionHistory, error) {
+	rows, err := s.db.Query("SELECT id, connection_string, connection_type, test_result_json, selected_database, created_at FROM connect_histories ORDER BY created_at DESC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var connHistories []types.ConnectionHistory
+	for rows.Next() {
+		var connHistory types.ConnectionHistory
+		var testResultJSON string
+		if err := rows.Scan(&connHistory.ID, &connHistory.ConnectionString, &connHistory.ConnectionType, &testResultJSON, &connHistory.SelectedDatabase, &connHistory.CreatedAt); err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal([]byte(testResultJSON), &connHistory.TestResult); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal test result: %w", err)
+		}
+		connHistories = append(connHistories, connHistory)
+	}
+	return connHistories, nil
+}
+
+// DeleteConnectionHistory deletes a connection history by ID
+func (s *Storage) DeleteConnectionHistory(id string) error {
+	_, err := s.db.Exec("DELETE FROM connect_histories WHERE id = ?", id)
 	return err
 }
 

@@ -10,8 +10,16 @@ export function DeleteConnection(arg1) {
   return window['go']['main']['App']['DeleteConnection'](arg1);
 }
 
+export function DeleteConnectionHistory(arg1) {
+  return window['go']['main']['App']['DeleteConnectionHistory'](arg1);
+}
+
 export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
+}
+
+export function GetConnectionHistories() {
+  return window['go']['main']['App']['GetConnectionHistories']();
 }
 
 export function GetConnectionHistory() {
@@ -68,6 +76,10 @@ export function ResumeMigration() {
 
 export function SaveConnection(arg1) {
   return window['go']['main']['App']['SaveConnection'](arg1);
+}
+
+export function SaveConnectionHistory(arg1) {
+  return window['go']['main']['App']['SaveConnectionHistory'](arg1);
 }
 
 export function StartMigration(arg1, arg2) {

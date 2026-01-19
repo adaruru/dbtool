@@ -1,11 +1,14 @@
 import { create } from 'zustand';
-import type { ConnectionConfig, ConnectionTestResult } from '../types';
+import type { ConnectionConfig, ConnectionTestResult, ConnectionHistory } from '../types';
 import {
   TestMSSQLConnection,
   TestPostgresConnection,
   SaveConnection,
   GetConnectionHistory,
-  DeleteConnection
+  DeleteConnection,
+  SaveConnectionHistory,
+  GetConnectionHistories,
+  DeleteConnectionHistory
 } from '../../wailsjs/go/main/App';
 
 interface ConnectionState {
@@ -14,6 +17,7 @@ interface ConnectionState {
   sourceTestResult: ConnectionTestResult | null;
   targetTestResult: ConnectionTestResult | null;
   connectionHistory: ConnectionConfig[];
+  connectionHistories: ConnectionHistory[];
   loading: boolean;
   error: string | null;
 
@@ -22,6 +26,9 @@ interface ConnectionState {
   saveConnection: (config: ConnectionConfig) => Promise<void>;
   loadConnectionHistory: () => Promise<void>;
   deleteConnection: (id: string) => Promise<void>;
+  saveConnectionHistory: (connHistory: ConnectionHistory) => Promise<void>;
+  loadConnectionHistories: () => Promise<void>;
+  deleteConnectionHistory: (id: string) => Promise<void>;
   setSourceConnection: (conn: ConnectionConfig | null) => void;
   setTargetConnection: (conn: ConnectionConfig | null) => void;
   clearError: () => void;
@@ -33,6 +40,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   sourceTestResult: null,
   targetTestResult: null,
   connectionHistory: [],
+  connectionHistories: [],
   loading: false,
   error: null,
 
@@ -96,5 +104,37 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
   setSourceConnection: (conn) => set({ sourceConnection: conn }),
   setTargetConnection: (conn) => set({ targetConnection: conn }),
-  clearError: () => set({ error: null })
+  clearError: () => set({ error: null }),
+
+  saveConnectionHistory: async (connHistory: ConnectionHistory) => {
+    try {
+      await SaveConnectionHistory(connHistory as never);
+      await get().loadConnectionHistories();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to save connection history';
+      set({ error: message });
+      throw e;
+    }
+  },
+
+  loadConnectionHistories: async () => {
+    try {
+      const connectionHistories = await GetConnectionHistories();
+      set({ connectionHistories: (connectionHistories || []) as unknown as ConnectionHistory[] });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to load connection histories';
+      set({ error: message });
+    }
+  },
+
+  deleteConnectionHistory: async (id: string) => {
+    try {
+      await DeleteConnectionHistory(id);
+      await get().loadConnectionHistories();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to delete connection history';
+      set({ error: message });
+      throw e;
+    }
+  }
 }));

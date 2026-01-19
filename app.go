@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	"adaru-db-tool/internal/connection"
 	"adaru-db-tool/internal/migration"
@@ -31,7 +34,38 @@ func (a *App) startup(ctx context.Context) {
 	// Initialize storage
 	store, err := storage.New()
 	if err != nil {
-		fmt.Printf("Warning: Failed to initialize storage: %v\n", err)
+		// 寫錯誤到檔案以便調試，使用相對路徑和日期檔名
+		if homeDir, e := os.UserHomeDir(); e == nil {
+			logDir := filepath.Join(homeDir, ".adaru-db-tool", "logs")
+			os.MkdirAll(logDir, 0755)
+
+			today := time.Now().Format("2006-01-02")
+			errorLogPath := filepath.Join(logDir, fmt.Sprintf("error_%s.log", today))
+
+			if logFile, e := os.Create(errorLogPath); e == nil {
+				logFile.WriteString(fmt.Sprintf("[%s] ERROR: Failed to initialize storage: %v\n",
+					time.Now().Format("2006-01-02 15:04:05"), err))
+				logFile.Close()
+			}
+		}
+		fmt.Printf("ERROR: Failed to initialize storage: %v\n", err)
+		// 即使失敗也繼續，但要明確記錄錯誤
+	} else {
+		// 寫成功訊息到檔案，使用相對路徑和日期檔名
+		if homeDir, e := os.UserHomeDir(); e == nil {
+			logDir := filepath.Join(homeDir, ".adaru-db-tool", "logs")
+			os.MkdirAll(logDir, 0755)
+
+			today := time.Now().Format("2006-01-02")
+			successLogPath := filepath.Join(logDir, fmt.Sprintf("success_%s.log", today))
+
+			if logFile, e := os.Create(successLogPath); e == nil {
+				logFile.WriteString(fmt.Sprintf("[%s] INFO: Storage initialized successfully\n",
+					time.Now().Format("2006-01-02 15:04:05")))
+				logFile.Close()
+			}
+		}
+		fmt.Printf("INFO: Storage initialized successfully\n")
 	}
 	a.storage = store
 }
@@ -73,11 +107,17 @@ func (a *App) TestPostgresConnection(connString string) *types.ConnectionTestRes
 
 // SaveConnection saves a connection configuration
 func (a *App) SaveConnection(config *types.ConnectionConfig) error {
+	if a.storage == nil {
+		return fmt.Errorf("storage not initialized")
+	}
 	return a.storage.SaveConnection(config)
 }
 
 // GetConnectionHistory retrieves saved connections
 func (a *App) GetConnectionHistory() ([]types.ConnectionConfig, error) {
+	if a.storage == nil {
+		return nil, fmt.Errorf("storage not initialized")
+	}
 	return a.storage.GetAllConnections()
 }
 
@@ -94,6 +134,29 @@ func (a *App) GetPostgresConnections() ([]types.ConnectionConfig, error) {
 // DeleteConnection deletes a saved connection
 func (a *App) DeleteConnection(id string) error {
 	return a.storage.DeleteConnection(id)
+}
+
+// ========== Connection History Methods ==========
+
+// SaveConnectionHistory saves a connection test result history
+func (a *App) SaveConnectionHistory(connHistory *types.ConnectionHistory) error {
+	if a.storage == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+	return a.storage.SaveConnectionHistory(connHistory)
+}
+
+// GetConnectionHistories retrieves all connection histories
+func (a *App) GetConnectionHistories() ([]types.ConnectionHistory, error) {
+	if a.storage == nil {
+		return nil, fmt.Errorf("storage not initialized")
+	}
+	return a.storage.GetConnectionHistories()
+}
+
+// DeleteConnectionHistory deletes a connection history by ID
+func (a *App) DeleteConnectionHistory(id string) error {
+	return a.storage.DeleteConnectionHistory(id)
 }
 
 // ========== Schema Methods ==========

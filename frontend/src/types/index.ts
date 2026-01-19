@@ -18,6 +18,15 @@ export interface ConnectionTestResult {
   databases?: string[];
 }
 
+export interface ConnectionHistory {
+  id: string;
+  connectionString: string;
+  connectionType: ConnectionType;
+  testResult: ConnectionTestResult;
+  selectedDatabase: string;
+  createdAt: string;
+}
+
 // Table types
 export interface TableInfo {
   schema: string;

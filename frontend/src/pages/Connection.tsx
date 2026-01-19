@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectionStore } from '../stores/connectionStore';
-import type { ConnectionTestResult } from '../types';
+import type { ConnectionTestResult, ConnectionHistory } from '../types';
 
 export default function Connection() {
   const { t } = useTranslation();
   const {
     sourceTestResult,
     targetTestResult,
+    connectionHistories,
     loading,
     error,
     testMSSQLConnection,
     testPostgresConnection,
+    saveConnectionHistory,
+    loadConnectionHistories,
+    deleteConnectionHistory,
     clearError
   } = useConnectionStore();
 
@@ -23,6 +27,10 @@ export default function Connection() {
   );
   const [sourceDatabase, setSourceDatabase] = useState('');
   const [targetDatabase, setTargetDatabase] = useState('');
+
+  useEffect(() => {
+    loadConnectionHistories();
+  }, [loadConnectionHistories]);
 
   const handleTestSource = async () => {
     clearError();
@@ -45,6 +53,27 @@ export default function Connection() {
       }
     } catch {
       // Error handled in store
+    }
+  };
+
+  const handleKeepConnection = async (
+    connString: string,
+    result: ConnectionTestResult,
+    database: string,
+    type: 'mssql' | 'postgres'
+  ) => {
+    try {
+      const connHistory: ConnectionHistory = {
+        id: '',
+        connectionString: connString,
+        connectionType: type,
+        testResult: result,
+        selectedDatabase: database,
+        createdAt: new Date().toISOString()
+      };
+      await saveConnectionHistory(connHistory);
+    } catch (error) {
+      console.error('Failed to keep connection:', error);
     }
   };
 
@@ -78,6 +107,19 @@ export default function Connection() {
               ))}
             </select>
           </div>
+        )}
+        {result.success && (
+          <button
+            className="btn secondary keep-btn"
+            onClick={() => handleKeepConnection(
+              type === 'source' ? sourceConnString : targetConnString,
+              result,
+              type === 'source' ? sourceDatabase : targetDatabase,
+              type === 'source' ? 'mssql' : 'postgres'
+            )}
+          >
+            {t('connection.keep')}
+          </button>
         )}
       </div>
     );
@@ -152,6 +194,43 @@ export default function Connection() {
           <a href="#/migration" className="btn success">
             {t('connection.goToMigration')}
           </a>
+        </div>
+      )}
+
+      {/* Connection Histories */}
+      {connectionHistories.length > 0 && (
+        <div className="connection-histories">
+          <h2>{t('connection.SavedConnectionHistories')}</h2>
+          <div className="histories-list">
+            {connectionHistories.map((history) => (
+              <div key={history.id} className="history-item">
+                <div className="history-header">
+                  <span className="connection-type">{history.connectionType.toUpperCase()}</span>
+                  <span className="connection-status">
+                    {history.testResult.success ? '✓ Success' : '✗ Failed'}
+                  </span>
+                  <button
+                    className="btn danger small"
+                    onClick={() => deleteConnectionHistory(history.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+                <div className="connection-string">{history.connectionString}</div>
+                {history.selectedDatabase && (
+                  <div className="selected-database">Database: {history.selectedDatabase}</div>
+                )}
+                <div className="created-at">
+                  Saved: {new Date(history.createdAt).toLocaleString()}
+                </div>
+                {history.testResult.serverVersion && (
+                  <div className="server-version">
+                    Version: {history.testResult.serverVersion}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

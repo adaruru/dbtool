@@ -48,7 +48,9 @@
     "version": "Version",
     "selectDatabase": "Select Database:",
     "bothConnected": "Both connections tested successfully!",
-    "goToMigration": "Go to Migration →"
+    "goToMigration": "Go to Migration →",
+    "SavedConnectionHistories": "Saved Connection Histories",
+    "keep": "Keep"
   },
   "migration": {
     "title": "Data Migration",

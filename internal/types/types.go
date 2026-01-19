@@ -23,10 +23,20 @@ type ConnectionConfig struct {
 
 // ConnectionTestResult represents the result of a connection test
 type ConnectionTestResult struct {
-	Success      bool     `json:"success"`
-	Message      string   `json:"message"`
-	ServerVersion string  `json:"serverVersion,omitempty"`
-	Databases    []string `json:"databases,omitempty"`
+	Success       bool     `json:"success"`
+	Message       string   `json:"message"`
+	ServerVersion string   `json:"serverVersion,omitempty"`
+	Databases     []string `json:"databases,omitempty"`
+}
+
+// ConnectionHistory represents a saved connection test result history
+type ConnectionHistory struct {
+	ID               string               `json:"id" db:"id"`
+	ConnectionString string               `json:"connectionString" db:"connection_string"`
+	ConnectionType   ConnectionType       `json:"connectionType" db:"connection_type"`
+	TestResult       ConnectionTestResult `json:"testResult"`
+	SelectedDatabase string               `json:"selectedDatabase" db:"selected_database"`
+	CreatedAt        time.Time            `json:"createdAt" db:"created_at"`
 }
 
 // TableInfo represents metadata about a database table
@@ -42,34 +52,34 @@ type TableInfo struct {
 
 // ColumnInfo represents metadata about a database column
 type ColumnInfo struct {
-	Name          string  `json:"name"`
-	DataType      string  `json:"dataType"`
-	MaxLength     int     `json:"maxLength"`
-	Precision     int     `json:"precision"`
-	Scale         int     `json:"scale"`
-	IsNullable    bool    `json:"isNullable"`
-	IsIdentity    bool    `json:"isIdentity"`
-	DefaultValue  *string `json:"defaultValue"`
-	IsPrimaryKey  bool    `json:"isPrimaryKey"`
+	Name         string  `json:"name"`
+	DataType     string  `json:"dataType"`
+	MaxLength    int     `json:"maxLength"`
+	Precision    int     `json:"precision"`
+	Scale        int     `json:"scale"`
+	IsNullable   bool    `json:"isNullable"`
+	IsIdentity   bool    `json:"isIdentity"`
+	DefaultValue *string `json:"defaultValue"`
+	IsPrimaryKey bool    `json:"isPrimaryKey"`
 }
 
 // ForeignKey represents a foreign key constraint
 type ForeignKey struct {
-	Name             string   `json:"name"`
-	Columns          []string `json:"columns"`
-	ReferencedSchema string   `json:"referencedSchema"`
-	ReferencedTable  string   `json:"referencedTable"`
+	Name              string   `json:"name"`
+	Columns           []string `json:"columns"`
+	ReferencedSchema  string   `json:"referencedSchema"`
+	ReferencedTable   string   `json:"referencedTable"`
 	ReferencedColumns []string `json:"referencedColumns"`
-	OnDelete         string   `json:"onDelete"`
-	OnUpdate         string   `json:"onUpdate"`
+	OnDelete          string   `json:"onDelete"`
+	OnUpdate          string   `json:"onUpdate"`
 }
 
 // IndexInfo represents an index on a table
 type IndexInfo struct {
-	Name      string   `json:"name"`
-	Columns   []string `json:"columns"`
-	IsUnique  bool     `json:"isUnique"`
-	IsClustered bool   `json:"isClustered"`
+	Name        string   `json:"name"`
+	Columns     []string `json:"columns"`
+	IsUnique    bool     `json:"isUnique"`
+	IsClustered bool     `json:"isClustered"`
 }
 
 // ViewInfo represents a database view
@@ -81,37 +91,37 @@ type ViewInfo struct {
 
 // StoredProcedureInfo represents a stored procedure
 type StoredProcedureInfo struct {
-	Schema     string           `json:"schema"`
-	Name       string           `json:"name"`
-	Definition string           `json:"definition"`
-	Parameters []ParameterInfo  `json:"parameters"`
+	Schema     string          `json:"schema"`
+	Name       string          `json:"name"`
+	Definition string          `json:"definition"`
+	Parameters []ParameterInfo `json:"parameters"`
 }
 
 // FunctionInfo represents a database function
 type FunctionInfo struct {
-	Schema     string           `json:"schema"`
-	Name       string           `json:"name"`
-	Definition string           `json:"definition"`
-	ReturnType string           `json:"returnType"`
-	Parameters []ParameterInfo  `json:"parameters"`
+	Schema     string          `json:"schema"`
+	Name       string          `json:"name"`
+	Definition string          `json:"definition"`
+	ReturnType string          `json:"returnType"`
+	Parameters []ParameterInfo `json:"parameters"`
 }
 
 // TriggerInfo represents a database trigger
 type TriggerInfo struct {
-	Schema     string `json:"schema"`
-	Name       string `json:"name"`
-	TableName  string `json:"tableName"`
-	Definition string `json:"definition"`
-	Timing     string `json:"timing"` // BEFORE, AFTER, INSTEAD OF
+	Schema     string   `json:"schema"`
+	Name       string   `json:"name"`
+	TableName  string   `json:"tableName"`
+	Definition string   `json:"definition"`
+	Timing     string   `json:"timing"` // BEFORE, AFTER, INSTEAD OF
 	Events     []string `json:"events"` // INSERT, UPDATE, DELETE
 }
 
 // ParameterInfo represents a parameter for a stored procedure or function
 type ParameterInfo struct {
-	Name      string `json:"name"`
-	DataType  string `json:"dataType"`
-	Direction string `json:"direction"` // IN, OUT, INOUT
-	HasDefault bool  `json:"hasDefault"`
+	Name       string `json:"name"`
+	DataType   string `json:"dataType"`
+	Direction  string `json:"direction"` // IN, OUT, INOUT
+	HasDefault bool   `json:"hasDefault"`
 }
 
 // SchemaInfo represents the complete schema of a database
@@ -156,21 +166,21 @@ type MigrationConfig struct {
 
 // MigrationRecord represents a migration job record
 type MigrationRecord struct {
-	ID                   string          `json:"id" db:"id"`
-	Name                 string          `json:"name" db:"name"`
-	SourceConnectionID   string          `json:"sourceConnectionId" db:"source_connection_id"`
-	TargetConnectionID   string          `json:"targetConnectionId" db:"target_connection_id"`
-	SourceDatabase       string          `json:"sourceDatabase" db:"source_database"`
-	TargetDatabase       string          `json:"targetDatabase" db:"target_database"`
-	Status               MigrationStatus `json:"status" db:"status"`
-	Config               string          `json:"config" db:"config_json"` // JSON encoded MigrationConfig
-	StartedAt            *time.Time      `json:"startedAt" db:"started_at"`
-	CompletedAt          *time.Time      `json:"completedAt" db:"completed_at"`
-	CreatedAt            time.Time       `json:"createdAt" db:"created_at"`
-	TotalTables          int             `json:"totalTables" db:"total_tables"`
-	CompletedTables      int             `json:"completedTables" db:"completed_tables"`
-	TotalRows            int64           `json:"totalRows" db:"total_rows"`
-	MigratedRows         int64           `json:"migratedRows" db:"migrated_rows"`
+	ID                 string          `json:"id" db:"id"`
+	Name               string          `json:"name" db:"name"`
+	SourceConnectionID string          `json:"sourceConnectionId" db:"source_connection_id"`
+	TargetConnectionID string          `json:"targetConnectionId" db:"target_connection_id"`
+	SourceDatabase     string          `json:"sourceDatabase" db:"source_database"`
+	TargetDatabase     string          `json:"targetDatabase" db:"target_database"`
+	Status             MigrationStatus `json:"status" db:"status"`
+	Config             string          `json:"config" db:"config_json"` // JSON encoded MigrationConfig
+	StartedAt          *time.Time      `json:"startedAt" db:"started_at"`
+	CompletedAt        *time.Time      `json:"completedAt" db:"completed_at"`
+	CreatedAt          time.Time       `json:"createdAt" db:"created_at"`
+	TotalTables        int             `json:"totalTables" db:"total_tables"`
+	CompletedTables    int             `json:"completedTables" db:"completed_tables"`
+	TotalRows          int64           `json:"totalRows" db:"total_rows"`
+	MigratedRows       int64           `json:"migratedRows" db:"migrated_rows"`
 }
 
 // TableMigrationState represents the migration state of a single table
@@ -233,18 +243,18 @@ type ValidationConfig struct {
 
 // ValidationResult represents the result of validating a table
 type ValidationResult struct {
-	TableName        string            `json:"tableName"`
-	RowCountMatch    bool              `json:"rowCountMatch"`
-	SourceRowCount   int64             `json:"sourceRowCount"`
-	TargetRowCount   int64             `json:"targetRowCount"`
-	ChecksumMatch    bool              `json:"checksumMatch"`
-	SourceChecksum   string            `json:"sourceChecksum"`
-	TargetChecksum   string            `json:"targetChecksum"`
-	SampleMatches    int               `json:"sampleMatches"`
-	SampleMismatches int               `json:"sampleMismatches"`
-	MismatchedRows   []MismatchDetail  `json:"mismatchedRows,omitempty"`
-	Status           string            `json:"status"`
-	Duration         string            `json:"duration"`
+	TableName        string           `json:"tableName"`
+	RowCountMatch    bool             `json:"rowCountMatch"`
+	SourceRowCount   int64            `json:"sourceRowCount"`
+	TargetRowCount   int64            `json:"targetRowCount"`
+	ChecksumMatch    bool             `json:"checksumMatch"`
+	SourceChecksum   string           `json:"sourceChecksum"`
+	TargetChecksum   string           `json:"targetChecksum"`
+	SampleMatches    int              `json:"sampleMatches"`
+	SampleMismatches int              `json:"sampleMismatches"`
+	MismatchedRows   []MismatchDetail `json:"mismatchedRows,omitempty"`
+	Status           string           `json:"status"`
+	Duration         string           `json:"duration"`
 }
 
 // MismatchDetail represents details about a mismatched row

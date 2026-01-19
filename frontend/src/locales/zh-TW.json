@@ -48,7 +48,9 @@
     "version": "版本",
     "selectDatabase": "選擇資料庫:",
     "bothConnected": "兩個連線都已成功測試！",
-    "goToMigration": "前往資料遷移 →"
+    "goToMigration": "前往資料遷移 →",
+    "SavedConnectionHistories": "保留的連線記錄",
+    "keep": "保留"
   },
   "migration": {
     "title": "資料遷移",

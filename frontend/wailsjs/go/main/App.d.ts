@@ -7,7 +7,11 @@ export function CancelMigration():Promise<void>;
 
 export function DeleteConnection(arg1:string):Promise<void>;
 
+export function DeleteConnectionHistory(arg1:string):Promise<void>;
+
 export function GetAppVersion():Promise<string>;
+
+export function GetConnectionHistories():Promise<Array<types.ConnectionHistory>>;
 
 export function GetConnectionHistory():Promise<Array<types.ConnectionConfig>>;
 
@@ -36,6 +40,8 @@ export function PauseMigration():Promise<void>;
 export function ResumeMigration():Promise<void>;
 
 export function SaveConnection(arg1:types.ConnectionConfig):Promise<void>;
+
+export function SaveConnectionHistory(arg1:types.ConnectionHistory):Promise<void>;
 
 export function StartMigration(arg1:types.MigrationConfig,arg2:string):Promise<string>;
 
