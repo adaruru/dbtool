@@ -18,11 +18,11 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "MSSQL to PostgreSQL Migration Tool",
-		Width:  1280,
-		Height: 800,
-		MinWidth: 1024,
-		MinHeight: 768,
+		Title:     "MSSQL to PostgreSQL Migration Tool",
+		Width:     1000,
+		Height:    600,
+		MinWidth:  750,
+		MinHeight: 450,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
