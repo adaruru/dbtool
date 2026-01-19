@@ -23,7 +23,18 @@ const getEffectiveTheme = (mode: ThemeMode): 'light' | 'dark' => {
 };
 
 const applyTheme = (theme: 'light' | 'dark') => {
-  document.documentElement.setAttribute('data-theme', theme);
+  if (typeof document === 'undefined') return;
+  
+  const htmlElement = document.documentElement;
+  console.log('應用主題:', theme);
+  
+  // 使用 toggle 方法更可靠
+  htmlElement.classList.toggle('dark', theme === 'dark');
+  
+  // 設置 data-theme 屬性（保留向後相容性）
+  htmlElement.setAttribute('data-theme', theme);
+  console.log('HTML classes:', htmlElement.className);
+  console.log('Has dark class:', htmlElement.classList.contains('dark'));
 };
 
 const savedMode = (localStorage.getItem('theme') as ThemeMode) || 'system';
