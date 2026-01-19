@@ -53,7 +53,14 @@ func getDataDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".adaru-db-tool"), nil
+
+	// Debug 模式使用子目錄
+	baseDir := filepath.Join(homeDir, ".adaru-db-tool")
+	if os.Getenv("ADARU_ENV") == "dev" {
+		return filepath.Join(baseDir, "dev"), nil
+	}
+
+	return baseDir, nil
 }
 
 // migrate runs database migrations

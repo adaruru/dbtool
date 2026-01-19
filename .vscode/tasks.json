@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "wails: build debug",
+      "type": "shell",
+      "command": "wails build -debug -o AdaruDbTool.exe",
+      "group": "build",
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "wails: dev",
+      "type": "shell",
+      "command": "wails dev",
+      "group": "build",
+      "isBackground": true
+    }
+  ]
+}
