@@ -1,4 +1,4 @@
-module mssql-to-postgresql
+module adaru-db-tool
 
 go 1.24.0
 

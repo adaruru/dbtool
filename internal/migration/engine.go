@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"mssql-to-postgresql/internal/connection"
-	"mssql-to-postgresql/internal/schema/converter"
-	"mssql-to-postgresql/internal/storage"
-	"mssql-to-postgresql/internal/types"
+	"adaru-db-tool/internal/connection"
+	"adaru-db-tool/internal/schema/converter"
+	"adaru-db-tool/internal/storage"
+	"adaru-db-tool/internal/types"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -34,15 +34,15 @@ type Engine struct {
 
 // MigrationState tracks the current state of a migration
 type MigrationState struct {
-	Status         types.MigrationStatus
-	StartTime      time.Time
-	TotalTables    int
+	Status          types.MigrationStatus
+	StartTime       time.Time
+	TotalTables     int
 	CompletedTables int
-	TotalRows      int64
-	MigratedRows   int64
-	CurrentTable   string
-	Tables         map[string]*TableState
-	Errors         []string
+	TotalRows       int64
+	MigratedRows    int64
+	CurrentTable    string
+	Tables          map[string]*TableState
+	Errors          []string
 }
 
 // TableState tracks the state of a single table migration

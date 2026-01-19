@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"mssql-to-postgresql/internal/types"
+	"adaru-db-tool/internal/types"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -33,7 +33,7 @@ func New() (*Storage, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
-	dbPath := filepath.Join(dataDir, "mssql-to-postgresql.db")
+	dbPath := filepath.Join(dataDir, "adaru-db-tool.db")
 	db, err := sqlx.Open("sqlite3", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -53,7 +53,7 @@ func getDataDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".mssql-to-postgresql"), nil
+	return filepath.Join(homeDir, ".adaru-db-tool"), nil
 }
 
 // migrate runs database migrations

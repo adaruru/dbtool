@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"mssql-to-postgresql/internal/types"
+	"adaru-db-tool/internal/types"
 
 	_ "github.com/microsoft/go-mssqldb"
 )

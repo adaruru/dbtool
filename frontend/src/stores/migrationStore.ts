@@ -60,7 +60,7 @@ export const useMigrationStore = create<MigrationStoreState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await GetTables(connString, database);
-      const tables = result || [];
+      const tables = (result || []) as unknown as TableInfo[];
       set({
         tables,
         selectedTables: tables.map(t => `${t.schema}.${t.name}`),

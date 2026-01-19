@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"mssql-to-postgresql/internal/types"
+	"adaru-db-tool/internal/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"mssql-to-postgresql/internal/connection"
-	"mssql-to-postgresql/internal/storage"
-	"mssql-to-postgresql/internal/types"
+	"adaru-db-tool/internal/connection"
+	"adaru-db-tool/internal/storage"
+	"adaru-db-tool/internal/types"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )

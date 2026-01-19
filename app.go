@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"mssql-to-postgresql/internal/connection"
-	"mssql-to-postgresql/internal/migration"
-	"mssql-to-postgresql/internal/storage"
-	"mssql-to-postgresql/internal/types"
-	"mssql-to-postgresql/internal/validation"
+	"adaru-db-tool/internal/connection"
+	"adaru-db-tool/internal/migration"
+	"adaru-db-tool/internal/storage"
+	"adaru-db-tool/internal/types"
+	"adaru-db-tool/internal/validation"
 )
 
 // App struct holds the application state

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"mssql-to-postgresql/internal/types"
+	"adaru-db-tool/internal/types"
 )
 
 // TypeMapper handles MSSQL to PostgreSQL data type mapping
