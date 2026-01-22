@@ -10,6 +10,8 @@ here: https://wails.io/docs/reference/project-config
 
 
 ```shell
+go mod tidy
+go build -o temp_test.exe
 #重新建置
 wails build -debug
 #本地測試 = vs code debug run

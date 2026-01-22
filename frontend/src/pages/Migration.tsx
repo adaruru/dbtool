@@ -25,8 +25,6 @@ export default function Migration() {
   } = useMigrationStore();
 
   const {
-    sourceTestResult,
-    targetTestResult,
     testedConnections,
     connectionHistories,
     loadConnectionHistories
@@ -57,15 +55,6 @@ export default function Migration() {
   useEffect(() => {
     loadConnectionHistories();
   }, [loadConnectionHistories]);
-
-  useEffect(() => {
-    if (!sourceDatabase && sourceTestResult?.databases && sourceTestResult.databases.length > 0) {
-      setSourceDatabase(sourceTestResult.databases[0]);
-    }
-    if (!targetDatabase && targetTestResult?.databases && targetTestResult.databases.length > 0) {
-      setTargetDatabase(targetTestResult.databases[0]);
-    }
-  }, [sourceTestResult, targetTestResult, sourceDatabase, targetDatabase]);
 
   const successfulConnections = useMemo(() => {
     const map = new Map<string, ConnectionHistory>();
@@ -336,10 +325,10 @@ export default function Migration() {
             <div className="bg-card-bg p-6 rounded-xl shadow-sm mb-5">
               <h2 className="text-lg font-semibold text-text-secondary mb-4">{t('migration.selectTables')}</h2>
               <div className="flex gap-3 items-center mb-4">
-                <button className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-text-primary rounded text-xs font-medium transition-colors" onClick={selectAllTables}>
+                <button className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded text-xs font-medium transition-colors" onClick={selectAllTables}>
                   {t('migration.selectAll')}
                 </button>
-                <button className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-text-primary rounded text-xs font-medium transition-colors" onClick={deselectAllTables}>
+                <button className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded text-xs font-medium transition-colors" onClick={deselectAllTables}>
                   {t('migration.deselectAll')}
                 </button>
                 <span className="ml-auto text-sm text-text-muted">

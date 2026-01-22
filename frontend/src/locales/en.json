@@ -36,6 +36,7 @@
   },
   "connection": {
     "title": "Connection Settings",
+    "databaseType": "Database Type",
     "sourceTitle": "Source Database (MSSQL)",
     "targetTitle": "Target Database (PostgreSQL)",
     "connectionString": "Connection String",

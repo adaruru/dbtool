@@ -18,7 +18,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     "MSSQL to PostgreSQL Migration Tool",
+		Title:     "Adaru DB Tool - MSSQL to PostgreSQL Migration",
 		Width:     1000,
 		Height:    600,
 		MinWidth:  750,

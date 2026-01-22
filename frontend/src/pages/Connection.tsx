@@ -98,7 +98,7 @@ export default function Connection() {
 
       {/* Connection Test Block */}
       <div className="bg-card-bg p-6 rounded-xl shadow-sm mb-8">
-        <h2 className="text-lg font-semibold text-text-secondary mb-4">{t('connection.testTitle')}</h2>
+        <h2 className="text-lg font-semibold text-text-secondary mb-4">{t('connection.testConnection')}</h2>
 
         {/* Database Type Selector */}
         <div className="mb-5">

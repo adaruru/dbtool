@@ -31,6 +31,7 @@ interface MigrationStoreState {
   error: string | null;
 
   loadTables: (connString: string, database: string) => Promise<void>;
+  
   startMigration: (config: MigrationConfig, name: string) => Promise<string>;
   pauseMigration: () => Promise<void>;
   resumeMigration: () => Promise<void>;
