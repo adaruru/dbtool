@@ -140,6 +140,7 @@
     "noLogs": "No logs for this migration"
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "delete": "Delete"
   }
 }

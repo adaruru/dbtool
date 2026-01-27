@@ -140,6 +140,7 @@
     "noLogs": "此遷移沒有日誌紀錄"
   },
   "common": {
-    "close": "關閉"
+    "close": "關閉",
+    "delete": "刪除"
   }
 }

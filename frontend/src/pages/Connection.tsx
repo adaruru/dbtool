@@ -199,7 +199,7 @@ export default function Connection() {
                     className="ml-auto px-3 py-1 bg-error hover:bg-error-hover text-white rounded text-xs font-medium transition-colors"
                     onClick={() => deleteConnectionHistory(history.id)}
                   >
-                    {t('connection.delete')}
+                    {t('common.delete')}
                   </button>
                 </div>
                 <div className="font-mono text-xs text-text-secondary break-all mb-2">{history.connectionString}</div>
