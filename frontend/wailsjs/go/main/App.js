@@ -14,8 +14,8 @@ export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
-export function GetConnectionHistory() {
-  return window['go']['main']['App']['GetConnectionHistory']();
+export function GetConnections() {
+  return window['go']['main']['App']['GetConnections']();
 }
 
 export function GetFunctions(arg1, arg2) {

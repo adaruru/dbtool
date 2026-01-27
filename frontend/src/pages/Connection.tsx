@@ -69,7 +69,8 @@ export default function Connection() {
         selectedDatabase: selectedDatabase,
         createdAt: new Date().toISOString()
       };
-      saveConnection(connection);
+      await saveConnection(connection);
+      console.log('Connection saved successfully');
     } catch (error) {
       console.error('Failed to keep connection:', error);
     }
@@ -199,7 +200,14 @@ export default function Connection() {
                   </span>
                   <button
                     className="ml-auto px-3 py-1 bg-error hover:bg-error-hover text-white rounded text-xs font-medium transition-colors"
-                    onClick={() => deleteConnection(connection.id)}
+                    onClick={async () => {
+                      try {
+                        await deleteConnection(connection.id);
+                        console.log('Connection deleted successfully');
+                      } catch (error) {
+                        console.error('Failed to delete connection:', error);
+                      }
+                    }}
                   >
                     {t('common.delete')}
                   </button>

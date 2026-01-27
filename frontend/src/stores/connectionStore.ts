@@ -6,8 +6,12 @@ import type {
 } from '../types';
 import {
   TestMSSQLConnection,
-  TestPostgresConnection
+  TestPostgresConnection,
+  SaveConnection,
+  GetConnections,
+  DeleteConnection
 } from '../../wailsjs/go/main/App';
+import { types } from '../../wailsjs/go/models';
 
 interface ConnectionState {
   sourceTestResult: ConnectionTestResult | null;
@@ -17,9 +21,9 @@ interface ConnectionState {
 
   testMSSQLConnection: (connString: string) => Promise<ConnectionTestResult>;
   testPostgresConnection: (connString: string) => Promise<ConnectionTestResult>;
-  saveConnection: (connection: Connection) => void;
-  loadConnections: () => void;
-  deleteConnection: (id: string) => void;
+  saveConnection: (connection: Connection) => Promise<void>;
+  loadConnections: () => Promise<void>;
+  deleteConnection: (id: string) => Promise<void>;
   getActiveConnections: () => Connection[];
   recordTestedConnection: (
     connectionType: ConnectionType,
@@ -73,50 +77,80 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   clearError: () => set({ error: null }),
   clearTestResult: () => set({ sourceTestResult: null }),
 
-  // Save connection to localStorage
-  saveConnection: (connection: Connection) => {
-    const state = get();
-    const existingIndex = state.connections.findIndex(
-      (conn) =>
-        conn.connectionType === connection.connectionType &&
-        conn.connectionString === connection.connectionString &&
-        !conn.deletedAt
-    );
+  // Save connection via backend API
+  saveConnection: async (connection: Connection) => {
+    try {
+      const config = new types.ConnectionConfig({
+        id: connection.id || '',
+        name: '',
+        type: connection.connectionType,
+        connectionString: connection.connectionString,
+        database: connection.selectedDatabase || '',
+        createdAt: connection.createdAt || new Date().toISOString(),
+        lastUsedAt: new Date().toISOString()
+      });
 
-    let updatedConnections: Connection[];
-    if (existingIndex >= 0) {
-      updatedConnections = [...state.connections];
-      updatedConnections[existingIndex] = { ...connection, id: updatedConnections[existingIndex].id };
-    } else {
-      updatedConnections = [...state.connections, connection];
+      console.log('Saving connection to backend:', config);
+      await SaveConnection(config);
+      
+      // Reload connections from backend to sync state
+      await get().loadConnections();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to save connection';
+      console.error('Save connection error:', message, e);
+      set({ error: message });
+      throw e;
     }
-
-    set({ connections: updatedConnections });
-    localStorage.setItem('connections', JSON.stringify(updatedConnections));
   },
 
-  // Load connections from localStorage
-  loadConnections: () => {
+  // Load connections from backend API
+  loadConnections: async () => {
     try {
-      const stored = localStorage.getItem('connections');
-      if (stored) {
-        const connections = JSON.parse(stored) as Connection[];
-        set({ connections });
+      console.log('Loading connections from backend...');
+      const configs = await GetConnections();
+      console.log('Loaded connection configs:', configs);
+      
+      if (!configs) {
+        set({ connections: [], error: null });
+        return;
       }
+
+      const connections: Connection[] = configs.map(config => ({
+        id: config.id,
+        connectionType: config.type as ConnectionType,
+        connectionString: config.connectionString,
+        selectedDatabase: config.database,
+        createdAt: config.createdAt,
+        testResult: { 
+          success: true, 
+          message: '', 
+          databases: config.database ? [config.database] : [] 
+        }
+      }));
+
+      console.log('Mapped connections:', connections);
+      set({ connections, error: null });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to load connections';
-      set({ error: message });
+      console.error('Load connections error:', message, e);
+      set({ error: message, connections: [] });
     }
   },
 
-  // Soft delete connection
-  deleteConnection: (id: string) => {
-    const state = get();
-    const updatedConnections = state.connections.map((conn) =>
-      conn.id === id ? { ...conn, deletedAt: new Date().toISOString() } : conn
-    );
-    set({ connections: updatedConnections });
-    localStorage.setItem('connections', JSON.stringify(updatedConnections));
+  // Soft delete connection via backend API
+  deleteConnection: async (id: string) => {
+    try {
+      console.log('Deleting connection:', id);
+      await DeleteConnection(id);
+      
+      // Reload connections from backend to sync state
+      await get().loadConnections();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to delete connection';
+      console.error('Delete connection error:', message, e);
+      set({ error: message });
+      throw e;
+    }
   },
 
   // Get only non-deleted connections
@@ -167,9 +201,6 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         updatedConnections = [...state.connections, newEntry];
       }
 
-      // Save to localStorage
-      localStorage.setItem('connections', JSON.stringify(updatedConnections));
-
       return { connections: updatedConnections };
     }),
 
@@ -185,9 +216,6 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
       const updated = [...state.connections];
       updated[idx] = { ...updated[idx], selectedDatabase };
-
-      // Save to localStorage
-      localStorage.setItem('connections', JSON.stringify(updated));
 
       return { connections: updated };
     })

@@ -113,8 +113,8 @@ func (a *App) SaveConnection(config *types.ConnectionConfig) error {
 	return a.storage.SaveConnection(config)
 }
 
-// GetConnectionHistory retrieves saved connections
-func (a *App) GetConnectionHistory() ([]types.ConnectionConfig, error) {
+// GetConnections retrieves all saved connections
+func (a *App) GetConnections() ([]types.ConnectionConfig, error) {
 	if a.storage == nil {
 		return nil, fmt.Errorf("storage not initialized")
 	}
@@ -135,8 +135,6 @@ func (a *App) GetPostgresConnections() ([]types.ConnectionConfig, error) {
 func (a *App) DeleteConnection(id string) error {
 	return a.storage.DeleteConnection(id)
 }
-
-// ========== Connection History Methods ==========
 
 // ========== Schema Methods ==========
 

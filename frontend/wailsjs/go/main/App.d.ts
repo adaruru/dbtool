@@ -9,7 +9,7 @@ export function DeleteConnection(arg1:string):Promise<void>;
 
 export function GetAppVersion():Promise<string>;
 
-export function GetConnectionHistory():Promise<Array<types.ConnectionConfig>>;
+export function GetConnections():Promise<Array<types.ConnectionConfig>>;
 
 export function GetFunctions(arg1:string,arg2:string):Promise<Array<types.FunctionInfo>>;
 

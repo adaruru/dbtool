@@ -55,12 +55,13 @@ export default function Migration() {
     loadConnections();
   }, [loadConnections]);
 
-  const successfulConnections = useMemo(() => {
-    return connections.filter((conn) => conn.testResult?.success);
+  const sourceOptions = useMemo(() => {
+    return connections.filter((conn) => conn.connectionType === 'mssql');
   }, [connections]);
 
-  const sourceOptions = successfulConnections.filter((conn) => conn.connectionType === 'mssql');
-  const targetOptions = successfulConnections.filter((conn) => conn.connectionType === 'postgres');
+  const targetOptions = useMemo(() => {
+    return connections.filter((conn) => conn.connectionType === 'postgres');
+  }, [connections]);
 
   const handleSelectSourceConnection = (id: string) => {
     setSourceSelectionId(id);
@@ -69,7 +70,7 @@ export default function Migration() {
       setSourceDatabase('');
       return;
     }
-    const conn = successfulConnections.find((c) => c.id === id);
+    const conn = connections.find((c) => c.id === id);
     if (conn) {
       setSourceConnString(conn.connectionString);
       setSourceDatabase(conn.selectedDatabase || conn.testResult.databases?.[0] || '');
@@ -83,7 +84,7 @@ export default function Migration() {
       setTargetDatabase('');
       return;
     }
-    const conn = successfulConnections.find((c) => c.id === id);
+    const conn = connections.find((c) => c.id === id);
     if (conn) {
       setTargetConnString(conn.connectionString);
       setTargetDatabase(conn.selectedDatabase || conn.testResult.databases?.[0] || '');
