@@ -1,16 +1,6 @@
 // Connection types
 export type ConnectionType = 'mssql' | 'postgres';
 
-export interface ConnectionConfig {
-  id: string;
-  name: string;
-  type: ConnectionType;
-  connectionString: string;
-  database: string;
-  createdAt: string;
-  lastUsedAt?: string;
-}
-
 export interface ConnectionTestResult {
   success: boolean;
   message: string;
