@@ -18,7 +18,8 @@ type ConnectionConfig struct {
 	ConnectionString string         `json:"connectionString" db:"connection_string"`
 	Database         string         `json:"database" db:"database_name"`
 	CreatedAt        time.Time      `json:"createdAt" db:"created_at"`
-	LastUsedAt       *time.Time     `json:"lastUsedAt" db:"last_used_at"`
+	LastUsedAt       *time.Time     `json:"lastUsedAt,omitempty" db:"last_used_at"`
+	DeletedAt        *time.Time     `json:"-" db:"deleted_at"`
 }
 
 // ConnectionTestResult represents the result of a connection test

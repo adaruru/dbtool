@@ -140,6 +140,7 @@ func (s *Storage) migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_migration_logs_level ON migration_logs(level)`,
 		`CREATE INDEX IF NOT EXISTS idx_connections_type ON connections(type)`,
 		`CREATE INDEX IF NOT EXISTS idx_connections_deleted ON connections(deleted_at)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_connections_unique ON connections(type, connection_string, database_name) WHERE deleted_at IS NULL`,
 	}
 
 	for _, migration := range migrations {
@@ -160,19 +161,38 @@ func (s *Storage) Close() error {
 
 // SaveConnection saves a connection configuration
 func (s *Storage) SaveConnection(conn *types.ConnectionConfig) error {
+	// Check if connection already exists based on type, connection_string, and database
+	var existingConn types.ConnectionConfig
+	err := s.db.Get(&existingConn, `
+		SELECT * FROM connections 
+		WHERE type = ? AND connection_string = ? AND database_name = ? AND deleted_at IS NULL
+	`, conn.Type, conn.ConnectionString, conn.Database)
+
+	if err == nil {
+		// Connection exists, update it
+		conn.ID = existingConn.ID
+		conn.CreatedAt = existingConn.CreatedAt
+		_, err := s.db.NamedExec(`
+			UPDATE connections 
+			SET name = :name,
+				last_used_at = :last_used_at
+			WHERE id = :id
+		`, conn)
+		return err
+	} else if err != sql.ErrNoRows {
+		// Database error
+		return err
+	}
+
+	// Connection doesn't exist, insert new one
 	if conn.ID == "" {
 		conn.ID = uuid.New().String()
 	}
 	conn.CreatedAt = time.Now()
 
-	_, err := s.db.NamedExec(`
+	_, err = s.db.NamedExec(`
 		INSERT INTO connections (id, name, type, connection_string, database_name, created_at, last_used_at)
 		VALUES (:id, :name, :type, :connection_string, :database_name, :created_at, :last_used_at)
-		ON CONFLICT(id) DO UPDATE SET
-			name = :name,
-			connection_string = :connection_string,
-			database_name = :database_name,
-			last_used_at = :last_used_at
 	`, conn)
 	return err
 }
@@ -191,14 +211,26 @@ func (s *Storage) GetConnection(id string) (*types.ConnectionConfig, error) {
 func (s *Storage) GetConnectionsByType(connType types.ConnectionType) ([]types.ConnectionConfig, error) {
 	var conns []types.ConnectionConfig
 	err := s.db.Select(&conns, "SELECT * FROM connections WHERE type = ? AND deleted_at IS NULL ORDER BY last_used_at DESC", connType)
-	return conns, err
+	if err != nil {
+		return []types.ConnectionConfig{}, err
+	}
+	if conns == nil {
+		return []types.ConnectionConfig{}, nil
+	}
+	return conns, nil
 }
 
 // GetAllConnections retrieves all active (non-deleted) connections
 func (s *Storage) GetAllConnections() ([]types.ConnectionConfig, error) {
 	var conns []types.ConnectionConfig
 	err := s.db.Select(&conns, "SELECT * FROM connections WHERE deleted_at IS NULL ORDER BY last_used_at DESC")
-	return conns, err
+	if err != nil {
+		return []types.ConnectionConfig{}, err
+	}
+	if conns == nil {
+		return []types.ConnectionConfig{}, nil
+	}
+	return conns, nil
 }
 
 // UpdateConnectionLastUsed updates the last_used_at timestamp

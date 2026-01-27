@@ -155,7 +155,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
   // Get only non-deleted connections
   getActiveConnections: () => {
-    return get().connections.filter((conn) => !conn.deletedAt);
+    return get().connections; //filter((conn) => !conn.deletedAt) 不需要，api 層過濾
   },
 
   recordTestedConnection: (connectionType, connectionString, testResult, selectedDatabase = '') =>
@@ -167,8 +167,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       const existingIndex = state.connections.findIndex(
         (conn) =>
           conn.connectionType === connectionType &&
-          conn.connectionString === connectionString &&
-          !conn.deletedAt
+          conn.connectionString === connectionString
       );
 
       const mergedSelectedDb =
@@ -209,8 +208,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       const idx = state.connections.findIndex(
         (conn) =>
           conn.connectionType === connectionType &&
-          conn.connectionString === connectionString &&
-          !conn.deletedAt
+          conn.connectionString === connectionString
       );
       if (idx === -1) return state;
 
