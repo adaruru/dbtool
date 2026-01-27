@@ -204,48 +204,6 @@ export namespace types {
 	        this.databases = source["databases"];
 	    }
 	}
-	export class ConnectionHistory {
-	    id: string;
-	    connectionString: string;
-	    connectionType: string;
-	    testResult: ConnectionTestResult;
-	    selectedDatabase: string;
-	    // Go type: time
-	    createdAt: any;
-	
-	    static createFrom(source: any = {}) {
-	        return new ConnectionHistory(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.connectionString = source["connectionString"];
-	        this.connectionType = source["connectionType"];
-	        this.testResult = this.convertValues(source["testResult"], ConnectionTestResult);
-	        this.selectedDatabase = source["selectedDatabase"];
-	        this.createdAt = this.convertValues(source["createdAt"], null);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	
 	export class ForeignKey {
 	    name: string;
 	    columns: string[];

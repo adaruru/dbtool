@@ -8,24 +8,15 @@ export interface ConnectionTestResult {
   databases?: string[];
 }
 
-export interface ConnectionHistory {
+// Connection record representing both tested and persisted connections
+export interface Connection {
   id: string;
   connectionString: string;
   connectionType: ConnectionType;
   testResult: ConnectionTestResult;
   selectedDatabase: string;
   createdAt: string;
-}
-
-// In-memory record of a successfully tested connection
-// (mirrors ConnectionHistory but may not be persisted).
-export interface TestedConnection {
-  id: string;
-  connectionString: string;
-  connectionType: ConnectionType;
-  testResult: ConnectionTestResult;
-  selectedDatabase: string;
-  createdAt: string;
+  deletedAt?: string; // Soft delete timestamp
 }
 
 // Table types

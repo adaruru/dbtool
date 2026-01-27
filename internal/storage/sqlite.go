@@ -77,7 +77,8 @@ func (s *Storage) migrate() error {
 			connection_string TEXT NOT NULL,
 			database_name TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			last_used_at DATETIME
+			last_used_at DATETIME,
+			deleted_at DATETIME
 		)`,
 		`CREATE TABLE IF NOT EXISTS migrations (
 			id TEXT PRIMARY KEY,
@@ -137,21 +138,8 @@ func (s *Storage) migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_migration_tables_migration_id ON migration_tables(migration_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_migration_logs_migration_id ON migration_logs(migration_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_migration_logs_level ON migration_logs(level)`,
-		`CREATE TABLE IF NOT EXISTS connect_histories (
-			id TEXT PRIMARY KEY,
-			connection_string TEXT NOT NULL,
-			connection_type TEXT NOT NULL CHECK (connection_type IN ('mssql', 'postgres')),
-			test_result_json TEXT NOT NULL,
-			selected_database TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_connect_histories_type ON connect_histories(connection_type)`,
-	}
-
-	// Additional migration for updated_at column
-	additionalMigrations := []string{
-		`ALTER TABLE connect_histories ADD COLUMN updated_at DATETIME;`,
+		`CREATE INDEX IF NOT EXISTS idx_connections_type ON connections(type)`,
+		`CREATE INDEX IF NOT EXISTS idx_connections_deleted ON connections(deleted_at)`,
 	}
 
 	for _, migration := range migrations {
@@ -160,28 +148,7 @@ func (s *Storage) migrate() error {
 		}
 	}
 
-	// Handle additional migrations that might fail if column exists
-	for _, migration := range additionalMigrations {
-		if _, err := s.db.Exec(migration); err != nil {
-			// Ignore if column already exists
-			if !isColumnExistsError(err) {
-				return fmt.Errorf("additional migration failed: %w", err)
-			}
-		}
-	}
-
 	return nil
-}
-
-// isColumnExistsError checks if the error is related to column already existing
-func isColumnExistsError(err error) bool {
-	errStr := err.Error()
-	return errStr == "duplicate column name: updated_at" ||
-		errStr == "column already exists" ||
-		errStr == "SQL logic error: duplicate column name: updated_at" ||
-		errStr == "SQL logic error: duplicate column name: updated_at (1)" ||
-		// Handle other variations
-		errStr == "table connect_histories has no column named updated_at"
 }
 
 // Close closes the database connection
@@ -210,27 +177,27 @@ func (s *Storage) SaveConnection(conn *types.ConnectionConfig) error {
 	return err
 }
 
-// GetConnection retrieves a connection by ID
+// GetConnection retrieves an active (non-deleted) connection by ID
 func (s *Storage) GetConnection(id string) (*types.ConnectionConfig, error) {
 	var conn types.ConnectionConfig
-	err := s.db.Get(&conn, "SELECT * FROM connections WHERE id = ?", id)
+	err := s.db.Get(&conn, "SELECT * FROM connections WHERE id = ? AND deleted_at IS NULL", id)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return &conn, err
 }
 
-// GetConnectionsByType retrieves all connections of a specific type
+// GetConnectionsByType retrieves all active (non-deleted) connections of a specific type
 func (s *Storage) GetConnectionsByType(connType types.ConnectionType) ([]types.ConnectionConfig, error) {
 	var conns []types.ConnectionConfig
-	err := s.db.Select(&conns, "SELECT * FROM connections WHERE type = ? ORDER BY last_used_at DESC", connType)
+	err := s.db.Select(&conns, "SELECT * FROM connections WHERE type = ? AND deleted_at IS NULL ORDER BY last_used_at DESC", connType)
 	return conns, err
 }
 
-// GetAllConnections retrieves all connections
+// GetAllConnections retrieves all active (non-deleted) connections
 func (s *Storage) GetAllConnections() ([]types.ConnectionConfig, error) {
 	var conns []types.ConnectionConfig
-	err := s.db.Select(&conns, "SELECT * FROM connections ORDER BY last_used_at DESC")
+	err := s.db.Select(&conns, "SELECT * FROM connections WHERE deleted_at IS NULL ORDER BY last_used_at DESC")
 	return conns, err
 }
 
@@ -240,105 +207,9 @@ func (s *Storage) UpdateConnectionLastUsed(id string) error {
 	return err
 }
 
-// DeleteConnection deletes a connection by ID
+// DeleteConnection soft-deletes a connection by ID
 func (s *Storage) DeleteConnection(id string) error {
-	_, err := s.db.Exec("DELETE FROM connections WHERE id = ?", id)
-	return err
-}
-
-// Connection History methods
-
-// SaveConnectionHistory saves a connection test result history
-func (s *Storage) SaveConnectionHistory(connHistory *types.ConnectionHistory) error {
-	// Check if a record with the same connection string and selected database exists
-	existing, err := s.GetConnectionHistoryByStringAndDatabase(connHistory.ConnectionString, connHistory.SelectedDatabase)
-	if err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("failed to check existing connection history: %w", err)
-	}
-
-	testResultJSON, err := json.Marshal(connHistory.TestResult)
-	if err != nil {
-		return fmt.Errorf("failed to marshal test result: %w", err)
-	}
-
-	if existing != nil {
-		// Update existing record
-		connHistory.ID = existing.ID
-		connHistory.CreatedAt = existing.CreatedAt // Keep original created time
-		_, err = s.db.Exec(`
-			UPDATE connect_histories 
-			SET connection_type = ?, test_result_json = ?, updated_at = ?
-			WHERE id = ?
-		`, connHistory.ConnectionType, string(testResultJSON), time.Now(), connHistory.ID)
-	} else {
-		// Insert new record
-		if connHistory.ID == "" {
-			connHistory.ID = uuid.New().String()
-		}
-		connHistory.CreatedAt = time.Now()
-		_, err = s.db.Exec(`
-			INSERT INTO connect_histories (id, connection_string, connection_type, test_result_json, selected_database, created_at)
-			VALUES (?, ?, ?, ?, ?, ?)
-		`, connHistory.ID, connHistory.ConnectionString, connHistory.ConnectionType, string(testResultJSON), connHistory.SelectedDatabase, connHistory.CreatedAt)
-	}
-	return err
-}
-
-// GetConnectionHistoryByStringAndDatabase finds a connection history by connection string and selected database
-func (s *Storage) GetConnectionHistoryByStringAndDatabase(connectionString, selectedDatabase string) (*types.ConnectionHistory, error) {
-	var connHistory types.ConnectionHistory
-	var testResultJSON string
-
-	err := s.db.QueryRow(`
-		SELECT id, connection_string, connection_type, test_result_json, selected_database, created_at 
-		FROM connect_histories 
-		WHERE connection_string = ? AND selected_database = ?
-		LIMIT 1
-	`, connectionString, selectedDatabase).Scan(
-		&connHistory.ID, &connHistory.ConnectionString, &connHistory.ConnectionType,
-		&testResultJSON, &connHistory.SelectedDatabase, &connHistory.CreatedAt)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
-		}
-		return nil, fmt.Errorf("failed to get connection history: %w", err)
-	}
-
-	if err := json.Unmarshal([]byte(testResultJSON), &connHistory.TestResult); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal test result: %w", err)
-	}
-
-	return &connHistory, nil
-}
-
-// GetConnectionHistories retrieves all connection histories
-func (s *Storage) GetConnectionHistories() ([]types.ConnectionHistory, error) {
-	rows, err := s.db.Query("SELECT id, connection_string, connection_type, test_result_json, selected_database, created_at FROM connect_histories ORDER BY created_at DESC")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var connHistories []types.ConnectionHistory
-	for rows.Next() {
-		var connHistory types.ConnectionHistory
-		var testResultJSON string
-		if err := rows.Scan(&connHistory.ID, &connHistory.ConnectionString, &connHistory.ConnectionType, &testResultJSON, &connHistory.SelectedDatabase, &connHistory.CreatedAt); err != nil {
-			return nil, err
-		}
-
-		if err := json.Unmarshal([]byte(testResultJSON), &connHistory.TestResult); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal test result: %w", err)
-		}
-		connHistories = append(connHistories, connHistory)
-	}
-	return connHistories, nil
-}
-
-// DeleteConnectionHistory deletes a connection history by ID
-func (s *Storage) DeleteConnectionHistory(id string) error {
-	_, err := s.db.Exec("DELETE FROM connect_histories WHERE id = ?", id)
+	_, err := s.db.Exec("UPDATE connections SET deleted_at = ? WHERE id = ?", time.Now(), id)
 	return err
 }
 

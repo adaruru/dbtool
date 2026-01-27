@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMigrationStore } from '../stores/migrationStore';
 import { useConnectionStore } from '../stores/connectionStore';
-import type { MigrationConfig, ConnectionHistory } from '../types';
+import type { MigrationConfig } from '../types';
 
 export default function Migration() {
   const { t } = useTranslation();
@@ -25,9 +25,8 @@ export default function Migration() {
   } = useMigrationStore();
 
   const {
-    testedConnections,
-    connectionHistories,
-    loadConnectionHistories
+    connections,
+    loadConnections
   } = useConnectionStore();
 
   const [migrationName, setMigrationName] = useState('');
@@ -53,28 +52,12 @@ export default function Migration() {
   const [targetSelectionId, setTargetSelectionId] = useState('');
 
   useEffect(() => {
-    loadConnectionHistories();
-  }, [loadConnectionHistories]);
+    loadConnections();
+  }, [loadConnections]);
 
   const successfulConnections = useMemo(() => {
-    const map = new Map<string, ConnectionHistory>();
-
-    [...testedConnections, ...connectionHistories].forEach((conn) => {
-      if (!conn.testResult?.success) return;
-      const key = `${conn.connectionType}-${conn.connectionString}`;
-      if (map.has(key)) return;
-
-      map.set(key, {
-        ...conn,
-        selectedDatabase:
-          conn.selectedDatabase ||
-          conn.testResult.databases?.[0] ||
-          ''
-      });
-    });
-
-    return Array.from(map.values());
-  }, [testedConnections, connectionHistories]);
+    return connections.filter((conn) => conn.testResult?.success);
+  }, [connections]);
 
   const sourceOptions = successfulConnections.filter((conn) => conn.connectionType === 'mssql');
   const targetOptions = successfulConnections.filter((conn) => conn.connectionType === 'postgres');

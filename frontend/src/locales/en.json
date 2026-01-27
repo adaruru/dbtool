@@ -50,7 +50,7 @@
     "selectDatabase": "Select Database:",
     "bothConnected": "Both connections tested successfully!",
     "goToMigration": "Go to Migration →",
-    "SavedConnectionHistories": "Saved Connection Histories",
+    "savedConnections": "Saved Connections",
     "keep": "Keep"
   },
   "migration": {

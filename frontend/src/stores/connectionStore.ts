@@ -1,37 +1,33 @@
 import { create } from 'zustand';
 import type {
   ConnectionTestResult,
-  ConnectionHistory,
-  ConnectionType,
-  TestedConnection
+  Connection,
+  ConnectionType
 } from '../types';
 import {
   TestMSSQLConnection,
-  TestPostgresConnection,
-  SaveConnectionHistory,
-  GetConnectionHistories,
-  DeleteConnectionHistory
+  TestPostgresConnection
 } from '../../wailsjs/go/main/App';
 
 interface ConnectionState {
   sourceTestResult: ConnectionTestResult | null;
-  connectionHistories: ConnectionHistory[];
-  testedConnections: TestedConnection[];
+  connections: Connection[];
   loading: boolean;
   error: string | null;
 
   testMSSQLConnection: (connString: string) => Promise<ConnectionTestResult>;
   testPostgresConnection: (connString: string) => Promise<ConnectionTestResult>;
-  saveConnectionHistory: (connHistory: ConnectionHistory) => Promise<void>;
-  loadConnectionHistories: () => Promise<void>;
-  deleteConnectionHistory: (id: string) => Promise<void>;
+  saveConnection: (connection: Connection) => void;
+  loadConnections: () => void;
+  deleteConnection: (id: string) => void;
+  getActiveConnections: () => Connection[];
   recordTestedConnection: (
     connectionType: ConnectionType,
     connectionString: string,
     testResult: ConnectionTestResult,
     selectedDatabase?: string
   ) => void;
-  updateTestedConnectionDatabase: (
+  updateConnectionDatabase: (
     connectionType: ConnectionType,
     connectionString: string,
     selectedDatabase: string
@@ -42,8 +38,7 @@ interface ConnectionState {
 
 export const useConnectionStore = create<ConnectionState>((set, get) => ({
   sourceTestResult: null,
-  connectionHistories: [],
-  testedConnections: [],
+  connections: [],
   loading: false,
   error: null,
 
@@ -65,7 +60,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await TestPostgresConnection(connString);
-      set({ loading: false });
+      set({ sourceTestResult: result, loading: false });
       get().recordTestedConnection('postgres', connString, result, result.databases?.[0]);
       return result;
     } catch (e: unknown) {
@@ -78,36 +73,55 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   clearError: () => set({ error: null }),
   clearTestResult: () => set({ sourceTestResult: null }),
 
-  saveConnectionHistory: async (connHistory: ConnectionHistory) => {
+  // Save connection to localStorage
+  saveConnection: (connection: Connection) => {
+    const state = get();
+    const existingIndex = state.connections.findIndex(
+      (conn) =>
+        conn.connectionType === connection.connectionType &&
+        conn.connectionString === connection.connectionString &&
+        !conn.deletedAt
+    );
+
+    let updatedConnections: Connection[];
+    if (existingIndex >= 0) {
+      updatedConnections = [...state.connections];
+      updatedConnections[existingIndex] = { ...connection, id: updatedConnections[existingIndex].id };
+    } else {
+      updatedConnections = [...state.connections, connection];
+    }
+
+    set({ connections: updatedConnections });
+    localStorage.setItem('connections', JSON.stringify(updatedConnections));
+  },
+
+  // Load connections from localStorage
+  loadConnections: () => {
     try {
-      await SaveConnectionHistory(connHistory as never);
-      await get().loadConnectionHistories();
+      const stored = localStorage.getItem('connections');
+      if (stored) {
+        const connections = JSON.parse(stored) as Connection[];
+        set({ connections });
+      }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to save connection history';
+      const message = e instanceof Error ? e.message : 'Failed to load connections';
       set({ error: message });
-      throw e;
     }
   },
 
-  loadConnectionHistories: async () => {
-    try {
-      const connectionHistories = await GetConnectionHistories();
-      set({ connectionHistories: (connectionHistories || []) as unknown as ConnectionHistory[] });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to load connection histories';
-      set({ error: message });
-    }
+  // Soft delete connection
+  deleteConnection: (id: string) => {
+    const state = get();
+    const updatedConnections = state.connections.map((conn) =>
+      conn.id === id ? { ...conn, deletedAt: new Date().toISOString() } : conn
+    );
+    set({ connections: updatedConnections });
+    localStorage.setItem('connections', JSON.stringify(updatedConnections));
   },
 
-  deleteConnectionHistory: async (id: string) => {
-    try {
-      await DeleteConnectionHistory(id);
-      await get().loadConnectionHistories();
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to delete connection history';
-      set({ error: message });
-      throw e;
-    }
+  // Get only non-deleted connections
+  getActiveConnections: () => {
+    return get().connections.filter((conn) => !conn.deletedAt);
   },
 
   recordTestedConnection: (connectionType, connectionString, testResult, selectedDatabase = '') =>
@@ -116,23 +130,25 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         return state;
       }
 
-      const existingIndex = state.testedConnections.findIndex(
+      const existingIndex = state.connections.findIndex(
         (conn) =>
-          conn.connectionType === connectionType && conn.connectionString === connectionString
+          conn.connectionType === connectionType &&
+          conn.connectionString === connectionString &&
+          !conn.deletedAt
       );
 
       const mergedSelectedDb =
         selectedDatabase ||
-        (existingIndex >= 0 ? state.testedConnections[existingIndex].selectedDatabase : '') ||
+        (existingIndex >= 0 ? state.connections[existingIndex].selectedDatabase : '') ||
         testResult.databases?.[0] ||
         '';
 
       const now = new Date().toISOString();
 
-      const newEntry: TestedConnection = {
+      const newEntry: Connection = {
         id:
           existingIndex >= 0
-            ? state.testedConnections[existingIndex].id
+            ? state.connections[existingIndex].id
             : (typeof crypto !== 'undefined' && 'randomUUID' in crypto
                 ? crypto.randomUUID()
                 : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
@@ -140,28 +156,39 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         connectionString,
         testResult,
         selectedDatabase: mergedSelectedDb,
-        createdAt: now
+        createdAt: existingIndex >= 0 ? state.connections[existingIndex].createdAt : now
       };
 
+      let updatedConnections: Connection[];
       if (existingIndex >= 0) {
-        const updated = [...state.testedConnections];
-        updated[existingIndex] = { ...updated[existingIndex], ...newEntry };
-        return { testedConnections: updated };
+        updatedConnections = [...state.connections];
+        updatedConnections[existingIndex] = { ...updatedConnections[existingIndex], ...newEntry };
+      } else {
+        updatedConnections = [...state.connections, newEntry];
       }
 
-      return { testedConnections: [...state.testedConnections, newEntry] };
+      // Save to localStorage
+      localStorage.setItem('connections', JSON.stringify(updatedConnections));
+
+      return { connections: updatedConnections };
     }),
 
-  updateTestedConnectionDatabase: (connectionType, connectionString, selectedDatabase) =>
+  updateConnectionDatabase: (connectionType, connectionString, selectedDatabase) =>
     set((state) => {
-      const idx = state.testedConnections.findIndex(
+      const idx = state.connections.findIndex(
         (conn) =>
-          conn.connectionType === connectionType && conn.connectionString === connectionString
+          conn.connectionType === connectionType &&
+          conn.connectionString === connectionString &&
+          !conn.deletedAt
       );
       if (idx === -1) return state;
 
-      const updated = [...state.testedConnections];
+      const updated = [...state.connections];
       updated[idx] = { ...updated[idx], selectedDatabase };
-      return { testedConnections: updated };
+
+      // Save to localStorage
+      localStorage.setItem('connections', JSON.stringify(updated));
+
+      return { connections: updated };
     })
 }));

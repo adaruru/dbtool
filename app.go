@@ -138,27 +138,6 @@ func (a *App) DeleteConnection(id string) error {
 
 // ========== Connection History Methods ==========
 
-// SaveConnectionHistory saves a connection test result history
-func (a *App) SaveConnectionHistory(connHistory *types.ConnectionHistory) error {
-	if a.storage == nil {
-		return fmt.Errorf("storage not initialized")
-	}
-	return a.storage.SaveConnectionHistory(connHistory)
-}
-
-// GetConnectionHistories retrieves all connection histories
-func (a *App) GetConnectionHistories() ([]types.ConnectionHistory, error) {
-	if a.storage == nil {
-		return nil, fmt.Errorf("storage not initialized")
-	}
-	return a.storage.GetConnectionHistories()
-}
-
-// DeleteConnectionHistory deletes a connection history by ID
-func (a *App) DeleteConnectionHistory(id string) error {
-	return a.storage.DeleteConnectionHistory(id)
-}
-
 // ========== Schema Methods ==========
 
 // GetTables retrieves tables from the source database

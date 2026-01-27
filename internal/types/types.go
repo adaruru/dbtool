@@ -29,16 +29,6 @@ type ConnectionTestResult struct {
 	Databases     []string `json:"databases,omitempty"`
 }
 
-// ConnectionHistory represents a saved connection test result history
-type ConnectionHistory struct {
-	ID               string               `json:"id" db:"id"`
-	ConnectionString string               `json:"connectionString" db:"connection_string"`
-	ConnectionType   ConnectionType       `json:"connectionType" db:"connection_type"`
-	TestResult       ConnectionTestResult `json:"testResult"`
-	SelectedDatabase string               `json:"selectedDatabase" db:"selected_database"`
-	CreatedAt        time.Time            `json:"createdAt" db:"created_at"`
-}
-
 // TableInfo represents metadata about a database table
 type TableInfo struct {
 	Schema      string       `json:"schema"`

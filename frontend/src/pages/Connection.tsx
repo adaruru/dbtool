@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectionStore } from '../stores/connectionStore';
-import type { ConnectionTestResult, ConnectionHistory } from '../types';
+import type { ConnectionTestResult, Connection } from '../types';
 
 type DatabaseType = 'mssql' | 'postgres';
 
@@ -9,17 +9,17 @@ export default function Connection() {
   const { t } = useTranslation();
   const {
     sourceTestResult,
-    connectionHistories,
     loading,
     error,
     testMSSQLConnection,
     testPostgresConnection,
-    saveConnectionHistory,
-    loadConnectionHistories,
-    deleteConnectionHistory,
+    saveConnection,
+    loadConnections,
+    deleteConnection,
+    getActiveConnections,
     clearError,
     clearTestResult,
-    updateTestedConnectionDatabase
+    updateConnectionDatabase
   } = useConnectionStore();
 
   const [dbType, setDbType] = useState<DatabaseType>('mssql');
@@ -27,8 +27,8 @@ export default function Connection() {
   const [selectedDatabase, setSelectedDatabase] = useState('');
 
   useEffect(() => {
-    loadConnectionHistories();
-  }, [loadConnectionHistories]);
+    loadConnections();
+  }, [loadConnections]);
 
   // 切換資料庫類型時更新預設連線字串
   const handleDbTypeChange = (type: DatabaseType) => {
@@ -50,7 +50,7 @@ export default function Connection() {
         : await testPostgresConnection(connString);
       if (result.databases && result.databases.length > 0 && !selectedDatabase) {
         setSelectedDatabase(result.databases[0]);
-        updateTestedConnectionDatabase(dbType, connString, result.databases[0]);
+        updateConnectionDatabase(dbType, connString, result.databases[0]);
       }
     } catch {
       // Error handled in store
@@ -59,15 +59,17 @@ export default function Connection() {
 
   const handleKeepConnection = async (result: ConnectionTestResult) => {
     try {
-      const connHistory: ConnectionHistory = {
-        id: '',
+      const connection: Connection = {
+        id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         connectionString: connString,
         connectionType: dbType,
         testResult: result,
         selectedDatabase: selectedDatabase,
         createdAt: new Date().toISOString()
       };
-      await saveConnectionHistory(connHistory);
+      saveConnection(connection);
     } catch (error) {
       console.error('Failed to keep connection:', error);
     }
@@ -153,7 +155,7 @@ export default function Connection() {
                   value={selectedDatabase}
                   onChange={(e) => {
                     setSelectedDatabase(e.target.value);
-                    updateTestedConnectionDatabase(dbType, connString, e.target.value);
+                    updateConnectionDatabase(dbType, connString, e.target.value);
                   }}
                   className="w-full px-3 py-2 border border-border rounded-md bg-card-bg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 >
@@ -177,41 +179,41 @@ export default function Connection() {
         )}
       </div>
 
-      {/* Connection Histories */}
-      {connectionHistories.length > 0 && (
+      {/* Saved Connections */}
+      {getActiveConnections().length > 0 && (
         <div className="bg-card-bg p-6 rounded-xl shadow-sm">
-          <h2 className="text-lg font-semibold text-text-secondary mb-4">{t('connection.SavedConnectionHistories')}</h2>
+          <h2 className="text-lg font-semibold text-text-secondary mb-4">{t('connection.savedConnections')}</h2>
           <div className="flex flex-col gap-4">
-            {connectionHistories.map((history) => (
-              <div key={history.id} className="p-4 border border-border rounded-lg bg-panel-bg">
+            {getActiveConnections().map((connection) => (
+              <div key={connection.id} className="p-4 border border-border rounded-lg bg-panel-bg">
                 <div className="flex items-center gap-3 mb-2">
                   <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                    history.connectionType === 'mssql'
+                    connection.connectionType === 'mssql'
                       ? 'bg-blue-500 text-white'
                       : 'bg-emerald-500 text-white'
                   }`}>
-                    {history.connectionType.toUpperCase()}
+                    {connection.connectionType.toUpperCase()}
                   </span>
                   <span className="text-xs text-success">
-                    {history.testResult.success ? '✓ Success' : '✗ Failed'}
+                    {connection.testResult.success ? '✓ Success' : '✗ Failed'}
                   </span>
                   <button
                     className="ml-auto px-3 py-1 bg-error hover:bg-error-hover text-white rounded text-xs font-medium transition-colors"
-                    onClick={() => deleteConnectionHistory(history.id)}
+                    onClick={() => deleteConnection(connection.id)}
                   >
                     {t('common.delete')}
                   </button>
                 </div>
-                <div className="font-mono text-xs text-text-secondary break-all mb-2">{history.connectionString}</div>
-                {history.selectedDatabase && (
-                  <div className="text-xs text-text-muted mb-1">Database: {history.selectedDatabase}</div>
+                <div className="font-mono text-xs text-text-secondary break-all mb-2">{connection.connectionString}</div>
+                {connection.selectedDatabase && (
+                  <div className="text-xs text-text-muted mb-1">Database: {connection.selectedDatabase}</div>
                 )}
                 <div className="text-xs text-text-muted mb-1">
-                  Saved: {new Date(history.createdAt).toLocaleString()}
+                  Saved: {new Date(connection.createdAt).toLocaleString()}
                 </div>
-                {history.testResult.serverVersion && (
+                {connection.testResult.serverVersion && (
                   <div className="text-xs text-text-muted">
-                    Version: {history.testResult.serverVersion}
+                    Version: {connection.testResult.serverVersion}
                   </div>
                 )}
               </div>
