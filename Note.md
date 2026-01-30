@@ -69,6 +69,12 @@ postgres://itsower:html5!its@localhost:5432/postgres?sslmode=disable
 
 這是一個現代化、輕量級的技術棧，注重性能和開發體驗！
 
+### 可用的測試連線
+
+Data Source=192.168.100.141,1436;Initial Catalog=LineCRM.CarCareSit;persist security info=True;user id=sa;password=html5!its;MultipleActiveResultSets=True;TrustServerCertificate=True
+
+postgres://itsower:html5!its@localhost:5432/postgres?sslmode=disable
+
 ### SQLite CGO
 
 `github.com/mattn/go-sqlite3` 依賴 CGO 進行編譯，當 CGO 被禁用時，它無法編譯，因此不能在無 CGO 環境中使用。
