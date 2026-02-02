@@ -192,7 +192,39 @@ func (e *Engine) getTablestoMigrate(ctx context.Context) ([]types.TableInfo, err
 		return nil, err
 	}
 
-	// Filter tables based on config
+	// Build a map for quick lookup
+	tableMap := make(map[string]types.TableInfo)
+	for _, table := range allTables {
+		fullName := table.Schema + "." + table.Name
+		tableMap[fullName] = table
+		// Also map by name only for backward compatibility
+		tableMap[table.Name] = table
+	}
+
+	// If IncludeTables is specified, use its order
+	if len(e.config.IncludeTables) > 0 {
+		var tables []types.TableInfo
+		for _, incl := range e.config.IncludeTables {
+			// Check exclude list
+			excluded := false
+			for _, excl := range e.config.ExcludeTables {
+				if excl == incl {
+					excluded = true
+					break
+				}
+			}
+			if excluded {
+				continue
+			}
+
+			if table, ok := tableMap[incl]; ok {
+				tables = append(tables, table)
+			}
+		}
+		return tables, nil
+	}
+
+	// No include list specified, use all tables (filtered by exclude)
 	var tables []types.TableInfo
 	for _, table := range allTables {
 		fullName := table.Schema + "." + table.Name
@@ -207,20 +239,6 @@ func (e *Engine) getTablestoMigrate(ctx context.Context) ([]types.TableInfo, err
 		}
 		if excluded {
 			continue
-		}
-
-		// Check include list (if specified)
-		if len(e.config.IncludeTables) > 0 {
-			included := false
-			for _, incl := range e.config.IncludeTables {
-				if incl == fullName || incl == table.Name {
-					included = true
-					break
-				}
-			}
-			if !included {
-				continue
-			}
 		}
 
 		tables = append(tables, table)

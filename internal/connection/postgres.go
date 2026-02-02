@@ -179,10 +179,15 @@ func (c *PostgresConnection) EnableForeignKeyChecks(ctx context.Context) error {
 
 // SyncSequence synchronizes a sequence with the max value in the table
 func (c *PostgresConnection) SyncSequence(ctx context.Context, schema, tableName, columnName string) error {
+	// pg_get_serial_sequence needs quoted identifiers to preserve case
+	qualifiedTable := fmt.Sprintf("%s.%s",
+		pgx.Identifier{schema}.Sanitize(),
+		pgx.Identifier{tableName}.Sanitize())
+
 	query := fmt.Sprintf(`
-		SELECT setval(pg_get_serial_sequence('%s.%s', '%s'),
+		SELECT setval(pg_get_serial_sequence('%s', '%s'),
 			COALESCE((SELECT MAX(%s) FROM %s.%s), 1))
-	`, schema, tableName, columnName,
+	`, qualifiedTable, columnName,
 		pgx.Identifier{columnName}.Sanitize(),
 		pgx.Identifier{schema}.Sanitize(),
 		pgx.Identifier{tableName}.Sanitize())

@@ -112,5 +112,6 @@ ProductPlan
 | WorkOrderDetails | NextReturnDate       | DateOnly | Date            | DateOnly 無法對應到 ODBC                   |
 | WorkOrders       | OrderDate            | DateOnly | Date            | DateOnly 無法對應到 ODBC                   |
 
+#3d64be
 
-
+#2a4683

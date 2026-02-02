@@ -21,8 +21,14 @@ export default function Migration() {
     toggleTableSelection,
     selectAllTables,
     deselectAllTables,
+    reorderTables,
+    moveTableToTop,
+    moveTableToBottom,
     clearError
   } = useMigrationStore();
+
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const {
     connections,
@@ -103,6 +109,24 @@ export default function Migration() {
     }
   };
 
+  // Drag handlers
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      reorderTables(dragIndex, dragOverIndex);
+    }
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
   const handleStartMigration = async () => {
     if (!migrationName.trim()) {
       alert(t('migration.alertEnterName'));
@@ -113,6 +137,11 @@ export default function Migration() {
       return;
     }
 
+    // 按照 tables 的順序（拖曳後順序）排列 selectedTables
+    const orderedTables = tables
+      .map(t => `${t.schema}.${t.name}`)
+      .filter(name => selectedTables.includes(name));
+
     const config: MigrationConfig = {
       sourceConnectionString: sourceConnString,
       targetConnectionString: targetConnString,
@@ -120,7 +149,7 @@ export default function Migration() {
       targetDatabase,
       includeSchema: options.includeSchema,
       includeData: options.includeData,
-      includeTables: selectedTables,
+      includeTables: orderedTables,
       includeViews: options.includeViews,
       includeProcedures: options.includeProcedures,
       includeFunctions: options.includeFunctions,
@@ -158,9 +187,7 @@ export default function Migration() {
         </div>
       )}
 
-      {!status && (
-        <>
-          {/* Configuration Section */}
+      {/* Configuration Section */}
           <div className="bg-card-bg p-6 rounded-xl shadow-sm mb-5">
             <h2 className="text-lg font-semibold text-text-secondary mb-4">{t('migration.configTitle')}</h2>
 
@@ -307,7 +334,8 @@ export default function Migration() {
           {/* Table Selection Section */}
           {tables.length > 0 && (
             <div className="bg-card-bg p-6 rounded-xl shadow-sm mb-5">
-              <h2 className="text-lg font-semibold text-text-secondary mb-4">{t('migration.selectTables')}</h2>
+              <h2 className="text-lg font-semibold text-text-secondary mb-2">{t('migration.selectTables')}</h2>
+              <p className="text-sm text-text-muted mb-4">拖曳 ☰ 調整遷移順序</p>
               <div className="flex gap-3 items-center mb-4">
                 <button className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded text-xs font-medium transition-colors" onClick={selectAllTables}>
                   {t('migration.selectAll')}
@@ -321,22 +349,57 @@ export default function Migration() {
               </div>
 
               <div className="max-h-96 overflow-y-auto border border-border-light rounded-lg mb-5">
-                {tables.map((table) => {
+                {tables.map((table, index) => {
                   const fullName = `${table.schema}.${table.name}`;
                   const isSelected = selectedTables.includes(fullName);
+                  const isDragging = dragIndex === index;
+                  const isDragOver = dragOverIndex === index;
                   return (
                     <div
                       key={fullName}
-                      className={`flex items-center px-4 py-3 border-b border-border-light cursor-pointer transition-colors hover:bg-accent-light ${isSelected ? 'bg-accent-light' : ''}`}
-                      onClick={() => toggleTableSelection(fullName)}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={`flex items-center px-4 py-3 border-b border-border-light cursor-grab transition-all
+                        ${isSelected ? 'bg-accent-light' : 'hover:bg-accent-light'}
+                        ${isDragging ? 'opacity-50 bg-gray-200' : ''}
+                        ${isDragOver ? 'border-t-2 border-t-accent' : ''}
+                      `}
                     >
+                      <span className="mr-1 text-text-muted cursor-grab select-none">☰</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveTableToTop(index); }}
+                        disabled={index === 0}
+                        className="px-1.5 py-0.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="移至最上"
+                      >
+                        ⬆
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveTableToBottom(index); }}
+                        disabled={index === tables.length - 1}
+                        className="px-1.5 py-0.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed mr-2"
+                        title="移至最下"
+                      >
+                        ⬇
+                      </button>
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleTableSelection(fullName)}
-                        className="mr-3 w-4 h-4"
+                        onClick={(e) => e.stopPropagation()}
+                        className="mr-3 w-4 h-4 cursor-pointer"
                       />
-                      <span className="flex-1 font-mono text-text-primary">{fullName}</span>
+                      <span
+                        className="flex-1 font-mono text-text-primary cursor-pointer"
+                        onClick={() => toggleTableSelection(fullName)}
+                      >
+                        {fullName}
+                      </span>
+                      <span className="text-text-muted text-sm mr-3">
+                        #{index + 1}
+                      </span>
                       <span className="text-text-muted text-sm">
                         {table.rowCount.toLocaleString()} {t('migration.rows')}
                       </span>
@@ -354,8 +417,6 @@ export default function Migration() {
               </button>
             </div>
           )}
-        </>
-      )}
 
       {/* Migration Progress Section */}
       {status && (

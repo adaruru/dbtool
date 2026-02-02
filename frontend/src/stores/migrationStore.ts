@@ -42,6 +42,9 @@ interface MigrationStoreState {
   toggleTableSelection: (tableName: string) => void;
   selectAllTables: () => void;
   deselectAllTables: () => void;
+  reorderTables: (fromIndex: number, toIndex: number) => void;
+  moveTableToTop: (index: number) => void;
+  moveTableToBottom: (index: number) => void;
   clearError: () => void;
   reset: () => void;
 }
@@ -169,6 +172,32 @@ export const useMigrationStore = create<MigrationStoreState>((set, get) => ({
 
   deselectAllTables: () => {
     set({ selectedTables: [] });
+  },
+
+  reorderTables: (fromIndex: number, toIndex: number) => {
+    const { tables } = get();
+    const newTables = [...tables];
+    const [removed] = newTables.splice(fromIndex, 1);
+    newTables.splice(toIndex, 0, removed);
+    set({ tables: newTables });
+  },
+
+  moveTableToTop: (index: number) => {
+    const { tables } = get();
+    if (index <= 0) return;
+    const newTables = [...tables];
+    const [removed] = newTables.splice(index, 1);
+    newTables.unshift(removed);
+    set({ tables: newTables });
+  },
+
+  moveTableToBottom: (index: number) => {
+    const { tables } = get();
+    if (index >= tables.length - 1) return;
+    const newTables = [...tables];
+    const [removed] = newTables.splice(index, 1);
+    newTables.push(removed);
+    set({ tables: newTables });
   },
 
   clearError: () => set({ error: null }),
