@@ -88,11 +88,11 @@ postgres://itsower:html5!its@localhost:5432/postgres?sslmode=disable
 
 這個驅動完全不依賴 CGO，與 `database/sql` 相容，可直接替換原本的 SQLite 驅動，並且在任何環境下（包括容器化或交叉編譯）都能穩定運行。安裝方式只需在專案中加入依賴 `modernc.org/sqlite v1.44.2`，原本的 SQL 操作邏輯不需要修改。
 
+### SSMS export Wizard
+
 Driver={PostgreSQL Unicode};server=localhost;port=5432;database=LineCRM.CarCare;uid=itsower;pwd=html5!its
 
 ![image-20260120115201342](.attach/.Note/image-20260120115201342.png)
-
-ProductPlan
 
 | 表               | 欄                   | 原始型別 | PostgreSQL 型別 | 錯誤原因                                   |
 | ---------------- | -------------------- | -------- | --------------- | ------------------------------------------ |
@@ -112,6 +112,168 @@ ProductPlan
 | WorkOrderDetails | NextReturnDate       | DateOnly | Date            | DateOnly 無法對應到 ODBC                   |
 | WorkOrders       | OrderDate            | DateOnly | Date            | DateOnly 無法對應到 ODBC                   |
 
-#3d64be
 
-#2a4683
+
+```sql
+CREATE DATABASE "CRMTest2"
+    WITH
+    OWNER = itsower
+    TEMPLATE = template0
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'C'
+    LC_CTYPE = 'C'
+    LOCALE_PROVIDER = 'libc'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+    
+CREATE DATABASE "LineCRM.CarCare3"
+    WITH
+    OWNER = itsower
+    TEMPLATE = template0
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'C'
+    LC_CTYPE = 'C'
+    LOCALE_PROVIDER = 'libc'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+```
+
+
+
+## Export Order
+
+-- ============================================
+
+-- 第一層：無依賴的基礎資料表（最先匯入）
+
+-- ============================================
+
+1. ProductPlans
+2. Tags
+3. CarVenders
+4. CarColors
+5. OilsCarVenders
+6. Menus
+7. Roles
+
+
+
+-- ============================================
+
+-- 第二層：依賴第一層的資料表
+
+-- ============================================
+
+8. CarModels (依賴 CarVenders)
+9. OilsCarModels (依賴 OilsCarVenders)
+10. CrmStores (需要先有 Users，但形成循環依賴，見下方處理)
+
+
+
+-- ============================================
+
+-- 第三層：核心主表
+
+-- ============================================
+
+11. Departments (依賴 ApprovalDatas 和自身，形成循環，見下方處理)
+12. ApprovalDatas (依賴 Users，形成循環)
+13. Users (依賴 Departments，形成循環)
+
+
+
+-- 循環依賴處理方案：
+
+-- 步驟 1: 先建立 Departments（暫時停用 FK）
+
+-- 步驟 2: 建立 ApprovalDatas（暫時停用 FK）
+
+-- 步驟 3: 建立 Users（暫時停用 FK）
+
+-- 步驟 4: 啟用所有 FK 約束
+
+
+
+-- ============================================
+
+-- 第四層：依賴 Users 的資料表
+
+-- ============================================
+
+14. --CrmStores (依賴 Users)
+15. ActionLog (依賴 Users)
+16. Agents (依賴 Users)
+17. UserRoles (依賴 Users, Roles)
+18. RoleMenus (依賴 Menus, Roles)
+
+
+
+-- ============================================
+
+-- 第五層：依賴多個第三/四層的資料表
+
+-- ============================================
+
+19. Stores (依賴 CrmStores, ProductPlans)
+20. OilsCarYears (依賴 OilsCarModels)
+21. RoleMenuDetails (依賴 RoleMenus)
+22. MenuDetails (依賴 Menus)
+
+
+
+-- ============================================
+
+-- 第六層：依賴 Stores 的資料表
+
+-- ============================================
+
+23. Customers (依賴 Stores)
+24. DeductionDatas (依賴 Stores)
+25. Invoices (依賴 Stores)
+26. ItemCategories (依賴 Stores)
+27. MarketingTemplates (依賴 Stores)
+28. NextReservations (依賴 Stores，也依賴 StoreCustomerCars，需二次處理)
+29. PlanHistories (依賴 Stores, ProductPlans)
+30. SalesDatas (依賴 Stores, ProductPlans, Users)
+31. StoreAccounts (依賴 Stores, Users)
+32. StoreCustomerCars (依賴 Stores, CarVenders, CarModels, CarColors)
+33. StoreRelationTags (依賴 Stores, Tags)
+34. StoreTags (依賴 Stores)
+
+
+
+-- ============================================
+
+-- 第七層：依賴第六層的資料表
+
+-- ============================================
+
+35. Items (依賴 ItemCategories)
+36. ItemCategoryTags (依賴 ItemCategories, Tags)
+37. Reservations (依賴 Customers)
+38. CrmStoreVisits (依賴 CrmStores)
+39. Oils (依賴 OilsCarYears)
+40. CustomerCarTags (依賴 StoreCustomerCars, StoreTags)
+
+
+
+-- ============================================
+
+-- 第八層：工單系統（最後匯入）
+
+-- ============================================
+
+41. WorkOrders (依賴 StoreCustomerCars, Stores)
+42. WorkOrderDetails (依賴 WorkOrders, ItemCategories, Items)
+
+
+
+-- ============================================
+
+-- 最後：更新 NextReservations 的 FK
+
+-- ============================================
+
+43. NextReservations (更新 StoreCustomerCarId FK)
