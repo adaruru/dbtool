@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wails version:*)"
+      "Bash(wails version:*)",
+      "WebSearch",
+      "Bash(del \"D:\\\\Users\\\\AmandaChou\\\\git\\\\github\\\\MssqlToPosgresql\\\\SKILL.md\")",
+      "Bash(dir:*)"
     ]
   }
 }
