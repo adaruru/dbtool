@@ -128,10 +128,6 @@ export default function Migration() {
   };
 
   const handleStartMigration = async () => {
-    if (!migrationName.trim()) {
-      alert(t('migration.alertEnterName'));
-      return;
-    }
     if (selectedTables.length === 0) {
       alert(t('migration.alertSelectTable'));
       return;
@@ -215,7 +211,7 @@ export default function Migration() {
                   <option value="">-- 從成功連線挑選來源 --</option>
                   {sourceOptions.map((conn) => (
                     <option key={conn.id} value={conn.id}>
-                      {`${conn.selectedDatabase || '(未選資料庫)'} : ${conn.connectionString}`}
+                      {`${conn.name || conn.selectedDatabase || '(未選資料庫)'} : ${conn.connectionString}`}
                     </option>
                   ))}
                 </select>
@@ -232,7 +228,7 @@ export default function Migration() {
                   <option value="">-- 從成功連線挑選目標 --</option>
                   {targetOptions.map((conn) => (
                     <option key={conn.id} value={conn.id}>
-                      {`${conn.selectedDatabase || '(未選資料庫)'} : ${conn.connectionString}`}
+                      {`${conn.name || conn.selectedDatabase || '(未選資料庫)'} : ${conn.connectionString}`}
                     </option>
                   ))}
                 </select>

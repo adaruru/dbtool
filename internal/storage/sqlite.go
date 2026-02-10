@@ -76,6 +76,7 @@ func (s *Storage) migrate() error {
 			type TEXT NOT NULL CHECK (type IN ('mssql', 'postgres')),
 			connection_string TEXT NOT NULL,
 			database_name TEXT,
+			server_version TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			last_used_at DATETIME,
 			deleted_at DATETIME
@@ -83,8 +84,6 @@ func (s *Storage) migrate() error {
 		`CREATE TABLE IF NOT EXISTS migrations (
 			id TEXT PRIMARY KEY,
 			name TEXT,
-			source_connection_id TEXT,
-			target_connection_id TEXT,
 			source_database TEXT NOT NULL,
 			target_database TEXT NOT NULL,
 			status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'paused', 'completed', 'failed', 'cancelled')),
@@ -95,9 +94,7 @@ func (s *Storage) migrate() error {
 			migrated_rows INTEGER DEFAULT 0,
 			started_at DATETIME,
 			completed_at DATETIME,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (source_connection_id) REFERENCES connections(id),
-			FOREIGN KEY (target_connection_id) REFERENCES connections(id)
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS migration_tables (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,6 +104,7 @@ func (s *Storage) migrate() error {
 			status TEXT NOT NULL,
 			total_rows INTEGER DEFAULT 0,
 			migrated_rows INTEGER DEFAULT 0,
+			migrate_order INTEGER DEFAULT 0,
 			last_checkpoint TEXT,
 			started_at DATETIME,
 			completed_at DATETIME,
@@ -191,8 +189,8 @@ func (s *Storage) SaveConnection(conn *types.ConnectionConfig) error {
 	conn.CreatedAt = time.Now()
 
 	_, err = s.db.NamedExec(`
-		INSERT INTO connections (id, name, type, connection_string, database_name, created_at, last_used_at)
-		VALUES (:id, :name, :type, :connection_string, :database_name, :created_at, :last_used_at)
+		INSERT INTO connections (id, name, type, connection_string, database_name, server_version, created_at, last_used_at)
+		VALUES (:id, :name, :type, :connection_string, :database_name, :server_version, :created_at, :last_used_at)
 	`, conn)
 	return err
 }
@@ -256,8 +254,8 @@ func (s *Storage) CreateMigration(record *types.MigrationRecord) error {
 	record.CreatedAt = time.Now()
 
 	_, err := s.db.NamedExec(`
-		INSERT INTO migrations (id, name, source_connection_id, target_connection_id, source_database, target_database, status, config_json, created_at)
-		VALUES (:id, :name, :source_connection_id, :target_connection_id, :source_database, :target_database, :status, :config_json, :created_at)
+		INSERT INTO migrations (id, name, source_database, target_database, status, config_json, created_at)
+		VALUES (:id, :name, :source_database, :target_database, :status, :config_json, :created_at)
 	`, record)
 	return err
 }
@@ -316,8 +314,8 @@ func (s *Storage) UpdateMigrationProgress(id string, totalTables, completedTable
 func (s *Storage) CreateTableMigration(state *types.TableMigrationState) error {
 	state.Status = types.MigrationStatusPending
 	result, err := s.db.NamedExec(`
-		INSERT INTO migration_tables (migration_id, table_name, schema_name, status, total_rows)
-		VALUES (:migration_id, :table_name, :schema_name, :status, :total_rows)
+		INSERT INTO migration_tables (migration_id, table_name, schema_name, status, total_rows, migrate_order)
+		VALUES (:migration_id, :table_name, :schema_name, :status, :total_rows, :migrate_order)
 	`, state)
 	if err != nil {
 		return err
@@ -366,7 +364,7 @@ func (s *Storage) UpdateTableMigrationStatus(id int64, status types.MigrationSta
 // GetTableMigrations retrieves table migrations for a migration
 func (s *Storage) GetTableMigrations(migrationID string) ([]types.TableMigrationState, error) {
 	var states []types.TableMigrationState
-	err := s.db.Select(&states, "SELECT * FROM migration_tables WHERE migration_id = ?", migrationID)
+	err := s.db.Select(&states, "SELECT * FROM migration_tables WHERE migration_id = ? ORDER BY migrate_order ASC", migrationID)
 	return states, err
 }
 

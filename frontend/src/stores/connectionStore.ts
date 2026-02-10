@@ -86,6 +86,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         type: connection.connectionType,
         connectionString: connection.connectionString,
         database: connection.selectedDatabase || '',
+        serverVersion: connection.testResult?.serverVersion || '',
         createdAt: connection.createdAt || new Date().toISOString(),
         lastUsedAt: new Date().toISOString()
       });
@@ -125,7 +126,8 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         testResult: { 
           success: true, 
           message: '', 
-          databases: config.database ? [config.database] : [] 
+          databases: config.database ? [config.database] : [],
+          serverVersion: config.serverVersion || undefined
         }
       }));
 

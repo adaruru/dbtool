@@ -17,6 +17,7 @@ type ConnectionConfig struct {
 	Type             ConnectionType `json:"type" db:"type"`
 	ConnectionString string         `json:"connectionString" db:"connection_string"`
 	Database         string         `json:"database" db:"database_name"`
+	ServerVersion    string         `json:"serverVersion" db:"server_version"`
 	CreatedAt        time.Time      `json:"createdAt" db:"created_at"`
 	LastUsedAt       *time.Time     `json:"lastUsedAt,omitempty" db:"last_used_at"`
 	DeletedAt        *time.Time     `json:"-" db:"deleted_at"`
@@ -157,21 +158,19 @@ type MigrationConfig struct {
 
 // MigrationRecord represents a migration job record
 type MigrationRecord struct {
-	ID                 string          `json:"id" db:"id"`
-	Name               string          `json:"name" db:"name"`
-	SourceConnectionID string          `json:"sourceConnectionId" db:"source_connection_id"`
-	TargetConnectionID string          `json:"targetConnectionId" db:"target_connection_id"`
-	SourceDatabase     string          `json:"sourceDatabase" db:"source_database"`
-	TargetDatabase     string          `json:"targetDatabase" db:"target_database"`
-	Status             MigrationStatus `json:"status" db:"status"`
-	Config             string          `json:"config" db:"config_json"` // JSON encoded MigrationConfig
-	StartedAt          *time.Time      `json:"startedAt" db:"started_at"`
-	CompletedAt        *time.Time      `json:"completedAt" db:"completed_at"`
-	CreatedAt          time.Time       `json:"createdAt" db:"created_at"`
-	TotalTables        int             `json:"totalTables" db:"total_tables"`
-	CompletedTables    int             `json:"completedTables" db:"completed_tables"`
-	TotalRows          int64           `json:"totalRows" db:"total_rows"`
-	MigratedRows       int64           `json:"migratedRows" db:"migrated_rows"`
+	ID              string          `json:"id" db:"id"`
+	Name            string          `json:"name" db:"name"`
+	SourceDatabase  string          `json:"sourceDatabase" db:"source_database"`
+	TargetDatabase  string          `json:"targetDatabase" db:"target_database"`
+	Status          MigrationStatus `json:"status" db:"status"`
+	Config          string          `json:"config" db:"config_json"` // JSON encoded MigrationConfig
+	StartedAt       *time.Time      `json:"startedAt" db:"started_at"`
+	CompletedAt     *time.Time      `json:"completedAt" db:"completed_at"`
+	CreatedAt       time.Time       `json:"createdAt" db:"created_at"`
+	TotalTables     int             `json:"totalTables" db:"total_tables"`
+	CompletedTables int             `json:"completedTables" db:"completed_tables"`
+	TotalRows       int64           `json:"totalRows" db:"total_rows"`
+	MigratedRows    int64           `json:"migratedRows" db:"migrated_rows"`
 }
 
 // TableMigrationState represents the migration state of a single table
@@ -183,6 +182,7 @@ type TableMigrationState struct {
 	Status         MigrationStatus `json:"status" db:"status"`
 	TotalRows      int64           `json:"totalRows" db:"total_rows"`
 	MigratedRows   int64           `json:"migratedRows" db:"migrated_rows"`
+	MigrateOrder   int             `json:"migrateOrder" db:"migrate_order"`
 	LastCheckpoint string          `json:"lastCheckpoint" db:"last_checkpoint"` // JSON
 	StartedAt      *time.Time      `json:"startedAt" db:"started_at"`
 	CompletedAt    *time.Time      `json:"completedAt" db:"completed_at"`

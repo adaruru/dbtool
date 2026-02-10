@@ -148,6 +148,7 @@ export namespace types {
 	    type: string;
 	    connectionString: string;
 	    database: string;
+	    serverVersion: string;
 	    // Go type: time
 	    createdAt: any;
 	    // Go type: time
@@ -164,6 +165,7 @@ export namespace types {
 	        this.type = source["type"];
 	        this.connectionString = source["connectionString"];
 	        this.database = source["database"];
+	        this.serverVersion = source["serverVersion"];
 	        this.createdAt = this.convertValues(source["createdAt"], null);
 	        this.lastUsedAt = this.convertValues(source["lastUsedAt"], null);
 	    }
@@ -388,8 +390,6 @@ export namespace types {
 	export class MigrationRecord {
 	    id: string;
 	    name: string;
-	    sourceConnectionId: string;
-	    targetConnectionId: string;
 	    sourceDatabase: string;
 	    targetDatabase: string;
 	    status: string;
@@ -413,8 +413,6 @@ export namespace types {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
-	        this.sourceConnectionId = source["sourceConnectionId"];
-	        this.targetConnectionId = source["targetConnectionId"];
 	        this.sourceDatabase = source["sourceDatabase"];
 	        this.targetDatabase = source["targetDatabase"];
 	        this.status = source["status"];
