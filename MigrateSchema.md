@@ -1,4 +1,4 @@
-# Migrate Schema & Migrate Data 完整流程
+# Migrate 完整流程
 
 ## 前端觸發流程
 
@@ -114,7 +114,7 @@
 
 ---
 
-## Phase 1: Migrate Schema（勾選 Include Schema）
+## Phase 1: Migrate Schema（勾選 Migrate Schema）
 
 ### 主流程：`migrateSchema()`
 **檔案**：`internal/migration/engine.go:250-305`
@@ -168,7 +168,7 @@
 
 ---
 
-## Phase 2: Migrate Data（勾選 Include Data）
+## Phase 2: Migrate Data（勾選 Migrate Schema）
 
 ### 主流程：`migrateData()`
 **檔案**：`internal/migration/engine.go:307-342`

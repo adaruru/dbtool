@@ -11,6 +11,7 @@ export interface ConnectionTestResult {
 // Connection record representing both tested and persisted connections
 export interface Connection {
   id: string;
+  name?: string; // 選填，連線名稱
   connectionString: string;
   connectionType: ConnectionType;
   testResult: ConnectionTestResult;

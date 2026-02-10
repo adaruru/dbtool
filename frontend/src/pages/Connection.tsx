@@ -23,8 +23,9 @@ export default function Connection() {
   } = useConnectionStore();
 
   const [dbType, setDbType] = useState<DatabaseType>('mssql');
-  const [connString, setConnString] = useState('sqlserver://username:password@localhost:1433');
+  const [connString, setConnString] = useState('Data Source=localhost,1433;User Id=username;Password=password;TrustServerCertificate=True');
   const [selectedDatabase, setSelectedDatabase] = useState('');
+  const [connectionName, setConnectionName] = useState('');
 
   useEffect(() => {
     loadConnections();
@@ -35,8 +36,9 @@ export default function Connection() {
     setDbType(type);
     clearTestResult();
     setSelectedDatabase('');
+    setConnectionName('');
     if (type === 'mssql') {
-      setConnString('sqlserver://username:password@localhost:1433');
+      setConnString('Data Source=localhost,1433;User Id=username;Password=password;TrustServerCertificate=True');
     } else {
       setConnString('postgres://username:password@localhost:5432/postgres?sslmode=disable');
     }
@@ -48,9 +50,14 @@ export default function Connection() {
       const result = dbType === 'mssql'
         ? await testMSSQLConnection(connString)
         : await testPostgresConnection(connString);
-      if (result.databases && result.databases.length > 0 && !selectedDatabase) {
-        setSelectedDatabase(result.databases[0]);
-        updateConnectionDatabase(dbType, connString, result.databases[0]);
+      if (result.databases && result.databases.length > 0) {
+        // 優先使用連線字串中已指定的資料庫
+        const dbFromConnStr = getDatabaseFromConnectionString(connString, dbType);
+        const defaultDb = (dbFromConnStr && result.databases.includes(dbFromConnStr))
+          ? dbFromConnStr
+          : result.databases[0];
+        setSelectedDatabase(defaultDb);
+        updateConnectionDatabase(dbType, connString, defaultDb);
       }
     } catch {
       // Error handled in store
@@ -63,6 +70,7 @@ export default function Connection() {
         id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: connectionName || undefined,
         connectionString: connString,
         connectionType: dbType,
         testResult: result,
@@ -70,6 +78,7 @@ export default function Connection() {
         createdAt: new Date().toISOString()
       };
       await saveConnection(connection);
+      setConnectionName(''); // 清空輸入
       console.log('Connection saved successfully');
     } catch (error) {
       console.error('Failed to keep connection:', error);
@@ -78,14 +87,58 @@ export default function Connection() {
 
   const getPlaceholder = () => {
     return dbType === 'mssql'
-      ? 'sqlserver://username:password@host:port'
-      : 'postgres://username:password@host:port/postgres?sslmode=disable';
+      ? 'Data Source=host,port;User Id=username;Password=password;TrustServerCertificate=True'
+      : 'postgres://username:password@host:port/dbname?sslmode=disable';
   };
 
   const getFormatHint = () => {
     return dbType === 'mssql'
       ? t('connection.sourceFormat')
       : t('connection.targetFormat');
+  };
+
+  // 從連線字串中解析資料庫名稱
+  const getDatabaseFromConnectionString = (connStr: string, type: DatabaseType): string | null => {
+    if (type === 'mssql') {
+      // ADO.NET 格式: Initial Catalog=xxx 或 Database=xxx
+      const match = connStr.match(/(?:Initial Catalog|Database)\s*=\s*([^;]+)/i);
+      return match ? match[1].trim() : null;
+    } else {
+      // URI 格式: postgres://user:pass@host:port/dbname?sslmode=disable
+      try {
+        const url = new URL(connStr);
+        const pathParts = url.pathname.split('/');
+        return pathParts[1] || null;
+      } catch {
+        return null;
+      }
+    }
+  };
+
+  // 更新連線字串中的資料庫名稱
+  const updateConnectionStringDatabase = (connStr: string, type: DatabaseType, newDb: string): string => {
+    if (type === 'mssql') {
+      // ADO.NET 格式: 更新或新增 Initial Catalog=xxx
+      if (/Initial Catalog\s*=/i.test(connStr)) {
+        return connStr.replace(/(Initial Catalog\s*=\s*)[^;]*/i, `$1${newDb}`);
+      } else if (/Database\s*=/i.test(connStr)) {
+        return connStr.replace(/(Database\s*=\s*)[^;]*/i, `$1${newDb}`);
+      } else {
+        // 沒有資料庫參數，新增 Initial Catalog
+        return connStr.replace(/;?\s*$/, '') + `;Initial Catalog=${newDb}`;
+      }
+    } else {
+      // URI 格式: postgres://user:pass@host:port/dbname?sslmode=disable
+      try {
+        const url = new URL(connStr);
+        const pathParts = url.pathname.split('/');
+        pathParts[1] = newDb;
+        url.pathname = pathParts.join('/');
+        return url.toString();
+      } catch {
+        return connStr;
+      }
+    }
   };
 
   return (
@@ -155,8 +208,11 @@ export default function Connection() {
                 <select
                   value={selectedDatabase}
                   onChange={(e) => {
-                    setSelectedDatabase(e.target.value);
-                    updateConnectionDatabase(dbType, connString, e.target.value);
+                    const newDb = e.target.value;
+                    setSelectedDatabase(newDb);
+                    const updatedConnStr = updateConnectionStringDatabase(connString, dbType, newDb);
+                    setConnString(updatedConnStr);
+                    updateConnectionDatabase(dbType, updatedConnStr, newDb);
                   }}
                   className="w-full px-3 py-2 border border-border rounded-md bg-card-bg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 >
@@ -169,12 +225,24 @@ export default function Connection() {
               </div>
             )}
             {sourceTestResult.success && (
-              <button
-                className="mt-3 px-4 py-2 bg-success hover:bg-success-hover text-white rounded-md text-sm font-medium transition-colors"
-                onClick={() => handleKeepConnection(sourceTestResult)}
-              >
-                {t('connection.keep')}
-              </button>
+              <>
+                <div className="mt-3">
+                  <label className="block text-sm text-text-secondary mb-2">{t('connection.connectionName')}</label>
+                  <input
+                    type="text"
+                    value={connectionName}
+                    onChange={(e) => setConnectionName(e.target.value)}
+                    placeholder={t('connection.connectionNamePlaceholder')}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-card-bg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </div>
+                <button
+                  className="mt-3 px-4 py-2 bg-success hover:bg-success-hover text-white rounded-md text-sm font-medium transition-colors"
+                  onClick={() => handleKeepConnection(sourceTestResult)}
+                >
+                  {t('connection.keep')}
+                </button>
+              </>
             )}
           </div>
         )}
@@ -194,6 +262,11 @@ export default function Connection() {
                       : 'bg-emerald-500 text-white'
                   }`}>
                     {connection.connectionType.toUpperCase()}
+                  </span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {connection.name || connection.selectedDatabase || (
+                      connection.connectionString.slice(0, 30) + (connection.connectionString.length > 30 ? '...' : '')
+                    )}
                   </span>
                   <span className="text-xs text-success">
                     {connection.testResult.success ? '✓ Success' : '✗ Failed'}

@@ -40,7 +40,7 @@
     "sourceTitle": "Source Database (MSSQL)",
     "targetTitle": "Target Database (PostgreSQL)",
     "connectionString": "Connection String",
-    "sourceFormat": "Format: sqlserver://[user]:[password]@[host]:[port]?database=[dbname]",
+    "sourceFormat": "Format: Data Source=[host],[port];User Id=[user];Password=[password];Initial Catalog=[dbname];TrustServerCertificate=True",
     "targetFormat": "Format: postgres://[user]:[password]@[host]:[port]/[dbname]?sslmode=disable",
     "testConnection": "Test Connection",
     "testing": "Testing...",
@@ -51,7 +51,9 @@
     "bothConnected": "Both connections tested successfully!",
     "goToMigration": "Go to Migration →",
     "savedConnections": "Saved Connections",
-    "keep": "Keep"
+    "keep": "Keep",
+    "connectionName": "Connection Name",
+    "connectionNamePlaceholder": "Optional, e.g., Production DB"
   },
   "migration": {
     "title": "Data Migration",

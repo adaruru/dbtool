@@ -40,7 +40,7 @@
     "sourceTitle": "來源資料庫 (MSSQL)",
     "targetTitle": "目標資料庫 (PostgreSQL)",
     "connectionString": "連線字串",
-    "sourceFormat": "格式: sqlserver://[user]:[password]@[host]:[port]?database=[dbname]",
+    "sourceFormat": "格式: Data Source=[host],[port];User Id=[user];Password=[password];Initial Catalog=[dbname];TrustServerCertificate=True",
     "targetFormat": "格式: postgres://[user]:[password]@[host]:[port]/[dbname]?sslmode=disable",
     "testConnection": "測試連線",
     "testing": "測試中...",
@@ -51,7 +51,9 @@
     "bothConnected": "兩個連線都已成功測試！",
     "goToMigration": "前往資料遷移 →",
     "savedConnections": "連線記錄",
-    "keep": "保留"
+    "keep": "保留",
+    "connectionName": "連線名稱",
+    "connectionNamePlaceholder": "選填，例如：正式環境 DB"
   },
   "migration": {
     "title": "資料遷移",

@@ -82,7 +82,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     try {
       const config = new types.ConnectionConfig({
         id: connection.id || '',
-        name: '',
+        name: connection.name || '',
         type: connection.connectionType,
         connectionString: connection.connectionString,
         database: connection.selectedDatabase || '',
@@ -117,6 +117,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
       const connections: Connection[] = configs.map(config => ({
         id: config.id,
+        name: config.name || undefined,
         connectionType: config.type as ConnectionType,
         connectionString: config.connectionString,
         selectedDatabase: config.database,
