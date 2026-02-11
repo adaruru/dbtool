@@ -313,8 +313,8 @@ export namespace types {
 	    // Go type: time
 	    createdAt: any;
 	    status: string;
-	    totalRows: number;
-	    migratedRows: number;
+	    totalRows?: number;
+	    migratedRows?: number;
 	    errorMessage: string;
 	
 	    static createFrom(source: any = {}) {
@@ -354,6 +354,8 @@ export namespace types {
 		}
 	}
 	export class MigrationConfig {
+	    sourceConnectionId?: string;
+	    targetConnectionId?: string;
 	    sourceConnectionString: string;
 	    targetConnectionString: string;
 	    sourceDatabase: string;
@@ -375,6 +377,8 @@ export namespace types {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourceConnectionId = source["sourceConnectionId"];
+	        this.targetConnectionId = source["targetConnectionId"];
 	        this.sourceConnectionString = source["sourceConnectionString"];
 	        this.targetConnectionString = source["targetConnectionString"];
 	        this.sourceDatabase = source["sourceDatabase"];

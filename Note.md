@@ -127,7 +127,7 @@ CREATE DATABASE "CRMTest2"
     CONNECTION LIMIT = -1
     IS_TEMPLATE = False;
     
-CREATE DATABASE "LineCRM.CarCare3"
+CREATE DATABASE "LineCRM.CarCare1"
     WITH
     OWNER = itsower
     TEMPLATE = template0
@@ -277,3 +277,5 @@ CREATE DATABASE "LineCRM.CarCare3"
 -- ============================================
 
 43. NextReservations (更新 StoreCustomerCarId FK)
+
+Failed to disable triggers for dbo.StoreTags: ERROR: relation "dbo.StoreTags" does not exist (SQLSTATE 42P01)
