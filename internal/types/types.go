@@ -146,7 +146,6 @@ type MigrationConfig struct {
 	IncludeSchema          bool     `json:"includeSchema"`
 	IncludeData            bool     `json:"includeData"`
 	IncludeTables          []string `json:"includeTables,omitempty"` // Empty means all tables
-	ExcludeTables          []string `json:"excludeTables,omitempty"`
 	IncludeViews           bool     `json:"includeViews"`
 	IncludeProcedures      bool     `json:"includeProcedures"`
 	IncludeFunctions       bool     `json:"includeFunctions"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -205,18 +206,6 @@ func (e *Engine) getTablestoMigrate(ctx context.Context) ([]types.TableInfo, err
 	if len(e.config.IncludeTables) > 0 {
 		var tables []types.TableInfo
 		for _, incl := range e.config.IncludeTables {
-			// Check exclude list
-			excluded := false
-			for _, excl := range e.config.ExcludeTables {
-				if excl == incl {
-					excluded = true
-					break
-				}
-			}
-			if excluded {
-				continue
-			}
-
 			if table, ok := tableMap[incl]; ok {
 				tables = append(tables, table)
 			}
@@ -224,27 +213,8 @@ func (e *Engine) getTablestoMigrate(ctx context.Context) ([]types.TableInfo, err
 		return tables, nil
 	}
 
-	// No include list specified, use all tables (filtered by exclude)
-	var tables []types.TableInfo
-	for _, table := range allTables {
-		fullName := table.Schema + "." + table.Name
-
-		// Check exclude list
-		excluded := false
-		for _, excl := range e.config.ExcludeTables {
-			if excl == fullName || excl == table.Name {
-				excluded = true
-				break
-			}
-		}
-		if excluded {
-			continue
-		}
-
-		tables = append(tables, table)
-	}
-
-	return tables, nil
+	// No include list specified, use all tables
+	return allTables, nil
 }
 
 // migrateSchema creates tables in the target database
@@ -378,50 +348,59 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 		orderByCol = columns[0]
 	}
 
-	// Disable triggers for faster insert
+	// ========== 停用觸發器 ==========
+	// 停用目標表的觸發器，避免插入時觸發額外邏輯，提升效能
 	if err := e.targetConn.DisableTriggers(ctx, table.Schema, table.Name); err != nil {
 		e.log(types.LogLevelWarn, fmt.Sprintf("Failed to disable triggers for %s: %v", tableName, err))
 	}
 
-	// Migrate in batches
-	var migratedRows int64
-	offset := 0
+	// ========== 批次遷移迴圈 ==========
+	var migratedRows int64 // 已遷移的總行數
+	offset := 0            // 目前讀取的偏移位置
 
+	// 無限迴圈，直到來源資料讀完為止
 	for {
+		// 檢查是否已取消遷移
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
 
+		// 檢查是否已暫停，若暫停則等待恢復
 		e.checkPaused()
 
-		// Read batch from source
+		// 從來源資料庫讀取一批資料
+		// 使用 ORDER BY + OFFSET 分頁讀取，每次讀取 BatchSize 筆
 		rows, err := e.sourceConn.ReadBatch(ctx, table.Schema, table.Name, columns, orderByCol, offset, e.config.BatchSize)
 		if err != nil {
 			return fmt.Errorf("failed to read batch at offset %d: %w", offset, err)
 		}
 
+		// 若無資料則跳出迴圈，表示遷移完成
 		if len(rows) == 0 {
 			break
 		}
 
-		// Get column names without brackets for PostgreSQL
+		// 準備 PostgreSQL 欄位名稱陣列
+		// PostgreSQL 不使用中括號包裹欄位名，直接使用欄位名稱
 		pgColumns := make([]string, len(tableDetails.Columns))
 		for i, col := range tableDetails.Columns {
 			pgColumns[i] = col.Name
 		}
 
-		// Insert batch using COPY protocol
+		// 使用 PostgreSQL COPY 協議批次插入資料
+		// COPY 協議比 INSERT 效率高數倍，適合大量資料遷移
 		_, err = e.targetConn.CopyFrom(ctx, table.Schema, table.Name, pgColumns, rows)
 		if err != nil {
 			return fmt.Errorf("failed to insert batch at offset %d: %w", offset, err)
 		}
 
-		migratedRows += int64(len(rows))
-		offset += len(rows)
+		// 更新計數器
+		migratedRows += int64(len(rows)) // 累加已遷移行數
+		offset += len(rows)              // 移動讀取偏移位置
 
-		// Update progress
+		// 更新內部狀態（執行緒安全）
 		e.mu.Lock()
 		e.state.MigratedRows += int64(len(rows))
 		if ts, ok := e.state.Tables[tableName]; ok {
@@ -429,15 +408,19 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 		}
 		e.mu.Unlock()
 
+		// 發送進度事件給前端，更新 UI 進度條
 		e.emitProgress(tableName, table.RowCount, migratedRows)
 	}
 
-	// Re-enable triggers
+	// ========== 重新啟用觸發器 ==========
+	// 資料插入完成後，恢復觸發器
 	if err := e.targetConn.EnableTriggers(ctx, table.Schema, table.Name); err != nil {
 		e.log(types.LogLevelWarn, fmt.Sprintf("Failed to enable triggers for %s: %v", tableName, err))
 	}
 
-	// Sync sequences for identity columns
+	// ========== 同步自增序列 ==========
+	// 對於有 IDENTITY 欄位的表，需要同步 PostgreSQL 的 SEQUENCE
+	// 確保下次 INSERT 時自增值正確（從最大值 + 1 開始）
 	for _, col := range tableDetails.Columns {
 		if col.IsIdentity {
 			if err := e.targetConn.SyncSequence(ctx, table.Schema, table.Name, col.Name); err != nil {
@@ -446,7 +429,7 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 		}
 	}
 
-	// Mark table as completed
+	// ========== 標記表格遷移完成 ==========
 	e.mu.Lock()
 	if ts, ok := e.state.Tables[tableName]; ok {
 		ts.Status = types.MigrationStatusCompleted
@@ -454,6 +437,7 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 	}
 	e.mu.Unlock()
 
+	// 發送表格完成事件給前端
 	e.emitEvent("migration:table-complete", map[string]interface{}{
 		"migrationId":  e.migrationID,
 		"table":        tableName,
@@ -649,7 +633,12 @@ func (e *Engine) updateProgress() {
 
 // CreateMigrationRecord creates a new migration record
 func (e *Engine) CreateMigrationRecord(name string) (string, error) {
+	// 暫存 IncludeTables，序列化前清空避免重複儲存
+	includeTables := e.config.IncludeTables
+	e.config.IncludeTables = nil
+
 	configJSON, err := json.Marshal(e.config)
+	e.config.IncludeTables = includeTables // 還原供後續使用
 	if err != nil {
 		return "", err
 	}
@@ -663,6 +652,25 @@ func (e *Engine) CreateMigrationRecord(name string) (string, error) {
 
 	if err := e.storage.CreateMigration(record); err != nil {
 		return "", err
+	}
+
+	// 將 includeTables 寫入 migration_tables
+	for i, fullName := range includeTables {
+		parts := strings.SplitN(fullName, ".", 2)
+		schema, tableName := "", fullName
+		if len(parts) == 2 {
+			schema, tableName = parts[0], parts[1]
+		}
+
+		state := &types.TableMigrationState{
+			MigrationID:  record.ID,
+			SchemaName:   schema,
+			TableName:    tableName,
+			MigrateOrder: i,
+		}
+		if err := e.storage.CreateTableMigration(state); err != nil {
+			return "", fmt.Errorf("failed to create table migration for %s: %w", fullName, err)
+		}
 	}
 
 	return record.ID, nil

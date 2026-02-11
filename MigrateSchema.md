@@ -1,7 +1,5 @@
 # Migrate 完整流程
 
-## 前端觸發流程
-
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ 使用者點擊「開始遷移」按鈕                                        │
@@ -112,23 +110,48 @@
 └─────────────────────────────────────────────────────────────────┘
 ```
 
----
+後端程式對應時間軸
+
+```
+對每個表格執行：
+時間軸：
+app.go StartMigration()                          【前端 API 入口】
+  │
+  ├── Configure(config)                          【設定遷移參數】
+  │
+  ├── CreateMigrationRecord(name)                【建立遷移記錄】
+  │     ├── 寫入 migrations 資料表
+  │     └── 寫入 migration_tables 資料表         ← includeTables 保留同步順序
+  │           （包含 migrate_order 拖曳順序）
+  │
+  └──engine.go engine.Start(migrationID)                  【啟動遷移引擎】
+        │
+        ├── 連線來源資料庫 (MSSQL)
+        ├── 連線目標資料庫 (PostgreSQL)
+        │
+        └──engine.go engine.runMigration(ctx)                 【背景執行遷移】
+              │
+              ├── getTablestoMigrate()           【取得遷移表格清單】
+              │     （按 IncludeTables 順序）
+              │
+              ├── Phase 1: migrateSchema()       【遷移資料表結構】
+              │     ├── 建立 Schema              （CREATE SCHEMA）
+              │     ├── 刪除目標表（選填）        （DROP TABLE IF dropTargetIfExists）
+              │     ├── 建立表格                 （CREATE TABLE）
+              │     └── 建立索引                 （CREATE INDEX）
+              │
+              ├── Phase 2: migrateData()         【遷移資料】
+              │     （使用 COPY 批次寫入）
+              │
+              └── Phase 3: createForeignKeys()   【建立外鍵約束】
+                    （最後建立 FK 避免順序問題）
+```
 
 ## Phase 1: Migrate Schema（勾選 Migrate Schema）
 
 ### 主流程：`migrateSchema()`
-**檔案**：`internal/migration/engine.go:250-305`
 
-```
-對每個表格執行：
-├── 1. 取得表格詳細資訊    engine.go:262-266
-├── 2. 建立 Schema         engine.go:269-271
-├── 3. 刪除目標表（選填）  engine.go:274-278
-├── 4. 建立表格            engine.go:281-285
-└── 5. 建立索引            engine.go:288-293
-```
-
-### 詳細步驟
+**檔案**：`internal/migration/engine.go:250-305`、`internal/migration/app.go`
 
 #### Step 1: 取得表格詳細資訊
 | 行數 | 檔案 | 說明 |
@@ -314,3 +337,58 @@
 | `GenerateForeignKeyDDL()` | type_mapper.go | 373-410 | 產生 FK DDL |
 | `CopyFrom()` | postgres.go | 134-148 | COPY 協議插入 |
 | `SyncSequence()` | postgres.go | 180-197 | 同步 Sequence |
+
+# Sqlite-tool db
+
+## Migrations
+
+### config_Json includeTables
+
+1. 前端 Migration.tsx (第 141-152 行)
+
+```typescript
+// 按照 tables 的順序（拖曳後順序）排列 selectedTables
+const orderedTables = tables
+  .map(t => `${t.schema}.${t.name}`)
+  .filter(name => selectedTables.includes(name));
+
+const config: MigrationConfig = {
+  // ...
+  includeTables: orderedTables,  // ← 這裡設定
+  // ...
+};
+
+await startMigration(config, migrationName);
+```
+
+### 2. 後端 engine.go (第 650-668 行)
+
+```typescript
+func (e *Engine) CreateMigrationRecord(name string) (string, error) {
+    configJSON, err := json.Marshal(e.config)  // ← 將整個 config 序列化為 JSON
+    // ...
+    record := &types.MigrationRecord{
+        // ...
+        Config: string(configJSON),  // ← 存入 config_json 欄位
+    }
+    e.storage.CreateMigration(record)
+}
+```
+
+
+### 3. 資料結構 types.go (第 148 行)
+```typescript
+type MigrationConfig struct {
+    // ...
+    IncludeTables []string `json:"includeTables,omitempty"`
+    // ...
+}
+```
+
+
+總結：前端 Migration.tsx 組裝 orderedTables → 傳給後端 → engine.go 用 json.Marshal(e.config) 序列化整個 MigrationConfig → 存入 migrations.config_json。
+
+```
+{"sourceConnectionString":"Data Source=192.168.100.141,1436;Initial Catalog=LineCRM.CarCare;persist security info=True;user id=sa;password=html5!its;MultipleActiveResultSets=True;TrustServerCertificate=True","targetConnectionString":"postgres://itsower:html5!its@localhost:5432/LineCRM.CarCare?sslmode=disable","sourceDatabase":"LineCRM.CarCare","targetDatabase":"LineCRM.CarCare","includeSchema":true,"includeData":true,"includeTables":["dbo.ActionLog","dbo.Agents","dbo.ApprovalDatas","dbo.BatchLogs","dbo.CarColors","dbo.CarModels","dbo.CarVenders","dbo.Coupons","dbo.CrmStores","dbo.CrmStoreVisits","dbo.CustomerCarTags","dbo.CustomerCoupons","dbo.Customers","dbo.DeductionDatas","dbo.Departments","dbo.Invoices","dbo.ItemCategories","dbo.ItemCategoryTags","dbo.Items","dbo.MarketingTemplates","dbo.MenuDetails","dbo.Menus","dbo.NextReservations","dbo.NotifyHistory","dbo.NotifySettings","dbo.Oils","dbo.OilsCarModels","dbo.OilsCarVenders","dbo.OilsCarYears","dbo.PlanHistories","dbo.ProductPlans","dbo.Reservations","dbo.ReservationSettings","dbo.ReservationStatus","dbo.RoleMenuDetails","dbo.RoleMenus","dbo.Roles","dbo.SalesBonusRates","dbo.SalesDatas","dbo.SerialNumbers","dbo.StoreAccounts","dbo.StoreCustomerCars","dbo.StoreRelationTags","dbo.Stores","dbo.StoreTags","dbo.Tags","dbo.UserRoles","dbo.Users","dbo.Workingdays","dbo.WorkOrderDetails","dbo.WorkOrders"],"includeViews":false,"includeProcedures":false,"includeFunctions":false,"includeTriggers":false,"batchSize":10000,"parallelTables":1,"dropTargetIfExists":false}
+```
+

@@ -131,16 +131,27 @@ func (c *PostgresConnection) ExecuteDDLBatch(ctx context.Context, statements []s
 	return tx.Commit(ctx)
 }
 
-// CopyFrom copies data to a table using the COPY protocol
+// CopyFrom 使用 PostgreSQL COPY 協議批次插入資料
+// COPY 協議是 PostgreSQL 最高效的批次插入方式，比 INSERT 快 5-10 倍
+// 參數說明：
+//   - schema: 目標 schema 名稱（如 "dbo"）
+//   - tableName: 目標表格名稱
+//   - columns: 欄位名稱陣列，順序需與 rows 中的資料對應
+//   - rows: 二維陣列，每個元素是一筆資料的所有欄位值
+//
+// 回傳插入的行數和錯誤
 func (c *PostgresConnection) CopyFrom(ctx context.Context, schema, tableName string, columns []string, rows [][]interface{}) (int64, error) {
+	// 組合 schema.tableName 識別符，pgx 會自動處理引號
 	identifier := pgx.Identifier{schema, tableName}
 
+	// 使用 pgx 的 CopyFrom 方法執行 COPY 協議
+	// CopyFromSlice 將 Go slice 轉換為 COPY 資料來源
 	count, err := c.pool.CopyFrom(
 		ctx,
 		identifier,
 		columns,
 		pgx.CopyFromSlice(len(rows), func(i int) ([]interface{}, error) {
-			return rows[i], nil
+			return rows[i], nil // 回傳第 i 筆資料
 		}),
 	)
 

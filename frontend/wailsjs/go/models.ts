@@ -355,7 +355,6 @@ export namespace types {
 	    includeSchema: boolean;
 	    includeData: boolean;
 	    includeTables?: string[];
-	    excludeTables?: string[];
 	    includeViews: boolean;
 	    includeProcedures: boolean;
 	    includeFunctions: boolean;
@@ -377,7 +376,6 @@ export namespace types {
 	        this.includeSchema = source["includeSchema"];
 	        this.includeData = source["includeData"];
 	        this.includeTables = source["includeTables"];
-	        this.excludeTables = source["excludeTables"];
 	        this.includeViews = source["includeViews"];
 	        this.includeProcedures = source["includeProcedures"];
 	        this.includeFunctions = source["includeFunctions"];

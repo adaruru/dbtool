@@ -71,7 +71,6 @@ export interface MigrationConfig {
   includeSchema: boolean;
   includeData: boolean;
   includeTables?: string[];
-  excludeTables?: string[];
   includeViews: boolean;
   includeProcedures: boolean;
   includeFunctions: boolean;
