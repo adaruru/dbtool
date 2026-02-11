@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useMigrationStore } from '../stores/migrationStore';
 
 export default function History() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { history, logs, loadHistory, loadLogs } = useMigrationStore();
   const [selectedMigration, setSelectedMigration] = useState<string | null>(null);
 
@@ -92,8 +94,20 @@ export default function History() {
                       {migration.migratedRows.toLocaleString()}/{migration.totalRows.toLocaleString()} {t('history.rows')}
                     </span>
                   </div>
-                  <div className="text-sm text-text-muted">
-                    {formatDate(migration.createdAt)}
+                  <div className="flex items-center justify-between gap-2 mt-2">
+                    <span className="text-sm text-text-muted">
+                      {formatDate(migration.createdAt)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/migration', { state: { rerunId: migration.id } });
+                      }}
+                      className="text-xs px-2 py-1 rounded border border-border bg-card-bg text-text-secondary hover:bg-accent hover:text-white transition-colors"
+                    >
+                      {t('history.rerun')}
+                    </button>
                   </div>
                 </div>
               ))}

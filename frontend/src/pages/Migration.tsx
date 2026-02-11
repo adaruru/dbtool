@@ -1,11 +1,20 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useMigrationStore } from '../stores/migrationStore';
 import { useConnectionStore } from '../stores/connectionStore';
+import { useRerunMigration } from '../hooks/useRerunMigration';
+import RerunBanner from '../components/migration/RerunBanner';
 import type { MigrationConfig } from '../types';
 
 export default function Migration() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const rerunId = (location.state as { rerunId?: string })?.rerunId ?? searchParams.get('rerun') ?? null;
+  const rerun = useRerunMigration(rerunId);
+  const appliedRerunRef = useRef(false);
+
   const {
     tables,
     selectedTables,
@@ -24,7 +33,8 @@ export default function Migration() {
     reorderTables,
     moveTableToTop,
     moveTableToBottom,
-    clearError
+    clearError,
+    setRerunTables
   } = useMigrationStore();
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -60,6 +70,35 @@ export default function Migration() {
   useEffect(() => {
     loadConnections();
   }, [loadConnections]);
+
+  // 套用 Rerun 載入的設定到表單（僅套用一次）
+  useEffect(() => {
+    if (!rerun.isRerunMode || !rerun.config || rerun.isLoading || appliedRerunRef.current) return;
+    appliedRerunRef.current = true;
+    const c = rerun.config;
+    setSourceConnString(c.sourceConnectionString);
+    setTargetConnString(c.targetConnectionString);
+    setSourceDatabase(c.sourceDatabase);
+    setTargetDatabase(c.targetDatabase);
+    setSourceSelectionId(c.sourceConnectionId ?? '');
+    setTargetSelectionId(c.targetConnectionId ?? '');
+    setOptions({
+      includeSchema: c.includeSchema,
+      includeData: c.includeData,
+      includeViews: c.includeViews,
+      includeProcedures: c.includeProcedures,
+      includeFunctions: c.includeFunctions,
+      includeTriggers: c.includeTriggers,
+      dropTargetIfExists: c.dropTargetIfExists,
+      batchSize: c.batchSize ?? 10000
+    });
+    if (rerun.originalName) setMigrationName(rerun.originalName);
+    if (rerun.tables.length > 0) setRerunTables(rerun.tables);
+  }, [rerun.isRerunMode, rerun.config, rerun.tables, rerun.originalName, rerun.isLoading, setRerunTables]);
+
+  useEffect(() => {
+    if (!rerunId) appliedRerunRef.current = false;
+  }, [rerunId]);
 
   const sourceOptions = useMemo(() => {
     return connections.filter((conn) => conn.connectionType === 'mssql');
@@ -181,6 +220,20 @@ export default function Migration() {
           {error}
           <button onClick={clearError} className="text-error-text hover:text-error text-lg">✕</button>
         </div>
+      )}
+
+      {rerun.isRerunMode && (
+        <>
+          {rerun.isLoading && (
+            <div className="text-text-muted text-sm mb-3">{t('migration.loading')}</div>
+          )}
+          {rerun.error && (
+            <div className="bg-error-bg text-error-text px-4 py-3 rounded-lg mb-5">{rerun.error}</div>
+          )}
+          {!rerun.isLoading && !rerun.error && (
+            <RerunBanner name={rerun.originalName} onClear={rerun.clearRerun} />
+          )}
+        </>
       )}
 
       {/* Configuration Section */}

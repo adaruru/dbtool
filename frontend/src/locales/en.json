@@ -96,7 +96,9 @@
     "logs": "Logs",
     "alertSelectSource": "Please select a source database first",
     "alertEnterName": "Please enter a migration name",
-    "alertSelectTable": "Please select at least one table"
+    "alertSelectTable": "Please select at least one table",
+    "rerunBanner": "Rerunning migration",
+    "rerunClear": "Clear and reset"
   },
   "validation": {
     "title": "Data Validation",
@@ -139,7 +141,8 @@
     "rows": "rows",
     "detailLogs": "Detailed Logs",
     "selectToViewLogs": "Select a migration record to view logs",
-    "noLogs": "No logs for this migration"
+    "noLogs": "No logs for this migration",
+    "rerun": "Rerun"
   },
   "common": {
     "close": "Close",

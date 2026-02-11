@@ -220,11 +220,11 @@ func (tm *TypeMapper) MapDefaultValue(defaultValue string, dataType string) stri
 		return ""
 	}
 
-	// Remove outer parentheses often present in MSSQL defaults
-	defaultValue = strings.TrimPrefix(defaultValue, "(")
-	defaultValue = strings.TrimSuffix(defaultValue, ")")
-	defaultValue = strings.TrimPrefix(defaultValue, "(")
-	defaultValue = strings.TrimSuffix(defaultValue, ")")
+	// 只移除「外層」成對括號：一次剝一層，避免把內層函數的 ) 也當外層砍掉。
+	// 例如 (sysutcdatetime()) 只應剝一層 → sysutcdatetime()；若做兩輪 TrimSuffix 會變成 sysutcdatetime(。
+	for len(defaultValue) >= 2 && defaultValue[0] == '(' && defaultValue[len(defaultValue)-1] == ')' {
+		defaultValue = defaultValue[1 : len(defaultValue)-1]
+	}
 
 	lower := strings.ToLower(defaultValue)
 
@@ -311,6 +311,10 @@ func (tm *TypeMapper) GenerateColumnDDL(col types.ColumnInfo) string {
 	if col.DefaultValue != nil && !isSerial {
 		defaultVal := tm.MapDefaultValue(*col.DefaultValue, col.DataType)
 		if defaultVal != "" {
+			// 多 token 的運算式（含空格或逗號）需用括號包成單一運算式，否則 PG 會報 syntax error（如 AT、,）
+			if strings.Contains(defaultVal, " ") || strings.Contains(defaultVal, ",") {
+				defaultVal = "(" + defaultVal + ")"
+			}
 			parts = append(parts, "DEFAULT", defaultVal)
 		}
 	}

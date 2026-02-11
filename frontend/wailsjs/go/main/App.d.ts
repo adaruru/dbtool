@@ -15,11 +15,15 @@ export function GetFunctions(arg1:string,arg2:string):Promise<Array<types.Functi
 
 export function GetMSSQLConnections():Promise<Array<types.ConnectionConfig>>;
 
+export function GetMigration(arg1:string):Promise<types.MigrationRecord>;
+
 export function GetMigrationHistory(arg1:number):Promise<Array<types.MigrationRecord>>;
 
 export function GetMigrationLogs(arg1:string,arg2:number):Promise<Array<types.LogEntry>>;
 
 export function GetMigrationStatus():Promise<migration.MigrationState>;
+
+export function GetMigrationTables(arg1:string):Promise<Array<types.TableMigrationState>>;
 
 export function GetPostgresConnections():Promise<Array<types.ConnectionConfig>>;
 

@@ -565,6 +565,26 @@ export namespace types {
 		    return a;
 		}
 	}
+	export class TableMigrationState {
+	    id: number;
+	    migrationId: string;
+	    tableName: string;
+	    schemaName: string;
+	    migrateOrder: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TableMigrationState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.migrationId = source["migrationId"];
+	        this.tableName = source["tableName"];
+	        this.schemaName = source["schemaName"];
+	        this.migrateOrder = source["migrateOrder"];
+	    }
+	}
 	export class ValidationConfig {
 	    migrationId: string;
 	    rowCountValidation: boolean;

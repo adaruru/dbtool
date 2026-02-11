@@ -290,6 +290,16 @@ func (a *App) GetMigrationLogs(migrationID string, limit int) ([]types.LogEntry,
 	return a.storage.GetLogs(migrationID, limit)
 }
 
+// GetMigration retrieves a single migration by ID (for rerun: config_json + name)
+func (a *App) GetMigration(id string) (*types.MigrationRecord, error) {
+	return a.storage.GetMigration(id)
+}
+
+// GetMigrationTables retrieves table list for a migration (ordered by migrate_order)
+func (a *App) GetMigrationTables(migrationID string) ([]types.TableMigrationState, error) {
+	return a.storage.GetTableMigrations(migrationID)
+}
+
 // ========== Validation Methods ==========
 
 // StartValidation starts data validation

@@ -96,7 +96,9 @@
     "logs": "日誌",
     "alertSelectSource": "請先選擇來源資料庫",
     "alertEnterName": "請輸入遷移名稱",
-    "alertSelectTable": "請至少選擇一個資料表"
+    "alertSelectTable": "請至少選擇一個資料表",
+    "rerunBanner": "正在重跑歷史遷移",
+    "rerunClear": "清除並重新設定"
   },
   "validation": {
     "title": "資料驗證",
@@ -139,7 +141,8 @@
     "rows": "筆",
     "detailLogs": "詳細日誌",
     "selectToViewLogs": "選擇一個遷移紀錄以查看日誌",
-    "noLogs": "此遷移沒有日誌紀錄"
+    "noLogs": "此遷移沒有日誌紀錄",
+    "rerun": "重跑"
   },
   "common": {
     "close": "關閉",

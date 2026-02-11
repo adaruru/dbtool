@@ -278,4 +278,101 @@ CREATE DATABASE "LineCRM.CarCare1"
 
 43. NextReservations (更新 StoreCustomerCarId FK)
 
-Failed to disable triggers for dbo.StoreTags: ERROR: relation "dbo.StoreTags" does not exist (SQLSTATE 42P01)
+### 實際 export
+
+ProductPlans	dbo	0
+Tags	dbo	1  `failed`		
+CarVenders	dbo	2
+CarColors	dbo	3
+OilsCarVenders	dbo	4
+Menus	dbo	5
+Roles	dbo	6
+CarModels	dbo	7
+OilsCarModels	dbo	8
+CrmStores	dbo	9
+Departments	dbo	10
+Users	dbo	11
+ActionLog	dbo	12
+Agents	dbo	13
+UserRoles	dbo	14
+RoleMenus	dbo	15
+Stores	dbo	16
+OilsCarYears	dbo	17
+RoleMenuDetails	dbo	18
+MenuDetails	dbo	19
+Customers	dbo	20
+DeductionDatas	dbo	21
+Invoices	dbo	22
+ItemCategories	dbo	23
+MarketingTemplates	dbo	24
+NextReservations	dbo	25
+PlanHistories	dbo	26
+SalesDatas	dbo	27
+StoreAccounts	dbo	28
+StoreCustomerCars	dbo	29
+StoreRelationTags	dbo	30
+StoreTags	dbo	31  `failed`		
+Items	dbo	32
+ItemCategoryTags	dbo	33  `failed`		
+Reservations	dbo	34
+CrmStoreVisits	dbo	35
+Oils	dbo	36
+CustomerCarTags	dbo	37
+WorkOrders	dbo	38
+WorkOrderDetails	dbo	39
+BatchLogs	dbo	40
+Coupons	dbo	41
+CustomerCoupons	dbo	42
+NotifyHistory	dbo	43
+NotifySettings	dbo	44
+ReservationSettings	dbo	45
+ReservationStatus	dbo	46
+SalesBonusRates	dbo	47
+SerialNumbers	dbo	48
+Workingdays	dbo	49
+ApprovalDatas	dbo	50
+
+### Fail 彙總
+
+Tags	dbo	1  `failed`		
+
+StoreTags	dbo	31  `failed`	
+
+ItemCategoryTags	dbo	33  `failed`		
+
+### 實際 error 
+
+6	e45358cf-7f05-41a4-81e8-73c7560ce5d4	error	Failed to create table dbo.Tags: ERROR: syntax error at or near "," (SQLSTATE 42601)	dbo.Tags	failed			ERROR: syntax error at or near "," (SQLSTATE 42601)	2026-02-11 14:55:29.396487 +0800 CST m=+376.326695901
+
+102	e45358cf-7f05-41a4-81e8-73c7560ce5d4	error	Failed to create table dbo.StoreTags: ERROR: syntax error at or near "," (SQLSTATE 42601)	dbo.StoreTags	failed			ERROR: syntax error at or near "," (SQLSTATE 42601)	2026-02-11 14:55:31.21187 +0800 CST m=+378.141626701
+
+109	e45358cf-7f05-41a4-81e8-73c7560ce5d4	error	Failed to create table dbo.ItemCategoryTags: ERROR: syntax error at or near "," (SQLSTATE 42601)	dbo.ItemCategoryTags	failed			ERROR: syntax error at or near "," (SQLSTATE 42601)	2026-02-11 14:55:31.3318141 +0800 CST m=+378.261541001
+
+173	e45358cf-7f05-41a4-81e8-73c7560ce5d4	error	Failed dbo.Tags: failed to insert batch at offset 0: statement description failed: ERROR: relation "dbo.Tags" does not exist (SQLSTATE 42P01)	dbo.Tags	failed	3	0	failed to insert batch at offset 0: statement description failed: ERROR: relation "dbo.Tags" does not exist (SQLSTATE 42P01)	2026-02-11 14:55:32.3951784 +0800 CST m=+379.324640401
+
+204	e45358cf-7f05-41a4-81e8-73c7560ce5d4	error	Failed dbo.StoreTags: failed to insert batch at offset 0: statement description failed: ERROR: relation "dbo.StoreTags" does not exist (SQLSTATE 42P01)	dbo.StoreTags	failed	3	0	failed to insert batch at offset 0: statement description failed: ERROR: relation "dbo.StoreTags" does not exist (SQLSTATE 42P01)	2026-02-11 14:55:34.8043435 +0800 CST m=+381.733205301
+
+207	e45358cf-7f05-41a4-81e8-73c7560ce5d4	error	Failed dbo.ItemCategoryTags: failed to insert batch at offset 0: statement description failed: ERROR: relation "dbo.ItemCategoryTags" does not exist (SQLSTATE 42P01)	dbo.ItemCategoryTags	failed	5	0	failed to insert batch at offset 0: statement description failed: ERROR: relation "dbo.ItemCategoryTags" does not exist (SQLSTATE 42P01)	2026-02-11 14:55:34.9033391 +0800 CST m=+381.832176301
+
+### trial fix1 failed
+
+結論: 是錯的，即便有這一段，仍然是失敗的，且失敗點甚至沒有任何變化，我先註解掉
+顯然是 create 的 sql 有錯，修改再遇到錯誤的時候，寫入本地 log ，有問題的 sql 記錄下來，必須參考專案當前寫 log 的方式
+
+**已做：** CREATE 失敗時會把「有問題的 DDL」寫入本地 log：`~/.adaru-db-tool/create_failed_YYYY-MM-DD.log`（與 app.go 的 error/success log 同目錄、日期檔名、append）。重跑遷移後請打開該檔查看實際送出的 SQL。
+
+**CREATE syntax error at or near "," 可能原因：**
+1. **DEFAULT 值**：MSSQL 的 default 定義（如 `CONVERT([bit],(0))`）含逗號，轉成 PG 時若未用括號包成單一運算式，逗號會被當成下一欄位。
+2. **MapDefaultValue 未處理的運算式**：若 default 是其他函數/運算式（非 getdate/newid/convert/cast 等已處理項），原樣輸出可能含逗號或 PG 不支援語法。
+3. **欄位名或型別**：理論上較少見，但若欄位名含逗號或型別字串被截斷，也可能造成解析錯誤。
+
+Tags	dbo	1  `failed`		
+
+StoreTags	dbo	31  `failed`	
+
+ItemCategoryTags	dbo	33  `failed`		
+
+            // 若預設值含逗號，必須用括號包成單一運算式，否則 PostgreSQL 會把逗號當成下一欄位 → syntax error at or near ","
+            if strings.Contains(defaultVal, ",") {
+                defaultVal = "(" + defaultVal + ")"
+            }****

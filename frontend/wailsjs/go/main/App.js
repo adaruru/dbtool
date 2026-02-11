@@ -26,6 +26,10 @@ export function GetMSSQLConnections() {
   return window['go']['main']['App']['GetMSSQLConnections']();
 }
 
+export function GetMigration(arg1) {
+  return window['go']['main']['App']['GetMigration'](arg1);
+}
+
 export function GetMigrationHistory(arg1) {
   return window['go']['main']['App']['GetMigrationHistory'](arg1);
 }
@@ -36,6 +40,10 @@ export function GetMigrationLogs(arg1, arg2) {
 
 export function GetMigrationStatus() {
   return window['go']['main']['App']['GetMigrationStatus']();
+}
+
+export function GetMigrationTables(arg1) {
+  return window['go']['main']['App']['GetMigrationTables'](arg1);
 }
 
 export function GetPostgresConnections() {

@@ -47,6 +47,8 @@ interface MigrationStoreState {
   moveTableToBottom: (index: number) => void;
   clearError: () => void;
   reset: () => void;
+  /** 從 Rerun 載入的表格清單（僅名稱，rowCount 為 0） */
+  setRerunTables: (fullNames: string[]) => void;
 }
 
 export const useMigrationStore = create<MigrationStoreState>((set, get) => ({
@@ -211,6 +213,16 @@ export const useMigrationStore = create<MigrationStoreState>((set, get) => ({
       progress: {},
       error: null
     });
+  },
+
+  setRerunTables: (fullNames: string[]) => {
+    const tables: TableInfo[] = fullNames.map((fullName) => {
+      const dot = fullName.indexOf('.');
+      const schema = dot > 0 ? fullName.slice(0, dot) : '';
+      const name = dot > 0 ? fullName.slice(dot + 1) : fullName;
+      return { schema, name, rowCount: 0 };
+    });
+    set({ tables, selectedTables: fullNames });
   }
 }));
 

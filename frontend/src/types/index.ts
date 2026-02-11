@@ -64,6 +64,8 @@ export interface IndexInfo {
 export type MigrationStatus = 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
 
 export interface MigrationConfig {
+  sourceConnectionId?: string;
+  targetConnectionId?: string;
   sourceConnectionString: string;
   targetConnectionString: string;
   sourceDatabase: string;
