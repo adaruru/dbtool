@@ -227,6 +227,21 @@ func (s *Storage) GetAllConnections() ([]types.ConnectionConfig, error) {
 	return conns, nil
 }
 
+// GetConnectionIDByString retrieves connection ID by connection string
+// 根據連線字串查詢對應的連線 ID，用於關聯 migration 與 connection
+func (s *Storage) GetConnectionIDByString(connString string) string {
+	var id string
+	err := s.db.Get(&id, `
+		SELECT id FROM connections 
+		WHERE connection_string = ? AND deleted_at IS NULL
+		LIMIT 1
+	`, connString)
+	if err != nil {
+		return ""
+	}
+	return id
+}
+
 // UpdateConnectionLastUsed updates the last_used_at timestamp
 func (s *Storage) UpdateConnectionLastUsed(id string) error {
 	_, err := s.db.Exec("UPDATE connections SET last_used_at = ? WHERE id = ?", time.Now(), id)

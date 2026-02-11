@@ -229,9 +229,10 @@ func (e *Engine) migrateSchema(ctx context.Context, tables []types.TableInfo) er
 		e.checkPaused()
 
 		// Get detailed table info
+		tableName := fmt.Sprintf("%s.%s", table.Schema, table.Name)
 		tableDetails, err := e.sourceConn.GetTableDetails(ctx, table.Schema, table.Name)
 		if err != nil {
-			e.log(types.LogLevelError, fmt.Sprintf("Failed to get details for %s.%s: %v", table.Schema, table.Name, err))
+			e.logTableProgress(types.LogLevelError, fmt.Sprintf("Failed to get details for %s: %v", tableName, err), tableName, "failed", nil, nil, err.Error())
 			continue
 		}
 
@@ -250,7 +251,7 @@ func (e *Engine) migrateSchema(ctx context.Context, tables []types.TableInfo) er
 		// Generate and execute CREATE TABLE
 		createDDL := e.typeMapper.GenerateCreateTableDDL(*tableDetails)
 		if err := e.targetConn.ExecuteDDL(ctx, createDDL); err != nil {
-			e.log(types.LogLevelError, fmt.Sprintf("Failed to create table %s.%s: %v", table.Schema, table.Name, err))
+			e.logTableProgress(types.LogLevelError, fmt.Sprintf("Failed to create table %s: %v", tableName, err), tableName, "failed", nil, nil, err.Error())
 			continue
 		}
 
@@ -297,8 +298,7 @@ func (e *Engine) migrateData(ctx context.Context, tables []types.TableInfo) erro
 		e.checkPaused()
 
 		if err := e.migrateTableData(ctx, table); err != nil {
-			tableName := fmt.Sprintf("%s.%s", table.Schema, table.Name)
-			e.logTableProgress(types.LogLevelError, fmt.Sprintf("Failed to migrate data for %s: %v", tableName, err), tableName, "failed", table.RowCount, 0, err.Error())
+			// migrateTableData 內部的 defer 已經處理了 log 寫入
 			// Continue with other tables
 		}
 
@@ -315,7 +315,30 @@ func (e *Engine) migrateData(ctx context.Context, tables []types.TableInfo) erro
 // migrateTableData migrates data for a single table
 func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) error {
 	tableName := fmt.Sprintf("%s.%s", table.Schema, table.Name)
-	e.logTableProgress(types.LogLevelInfo, fmt.Sprintf("Migrating data for %s (%d rows)", tableName, table.RowCount), tableName, "running", table.RowCount, 0, "")
+
+	// 狀態追蹤變數
+	status := "running"
+	var migratedRows int64
+	var errorMsg string
+
+	// 使用 defer 確保一定會寫入 log（無論成功、失敗或異常）
+	defer func() {
+		var level types.LogLevel
+		var message string
+		totalRows := table.RowCount
+		switch status {
+		case "completed":
+			level = types.LogLevelInfo
+			message = fmt.Sprintf("Completed %s: %d rows migrated", tableName, migratedRows)
+		case "failed":
+			level = types.LogLevelError
+			message = fmt.Sprintf("Failed %s: %s", tableName, errorMsg)
+		default:
+			level = types.LogLevelWarn
+			message = fmt.Sprintf("Interrupted %s: %d rows migrated (status: %s)", tableName, migratedRows, status)
+		}
+		e.logTableProgress(level, message, tableName, status, &totalRows, &migratedRows, errorMsg)
+	}()
 
 	e.mu.Lock()
 	e.state.CurrentTable = tableName
@@ -331,6 +354,8 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 	// Get table details for column info
 	tableDetails, err := e.sourceConn.GetTableDetails(ctx, table.Schema, table.Name)
 	if err != nil {
+		status = "failed"
+		errorMsg = err.Error()
 		return err
 	}
 
@@ -356,14 +381,15 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 	}
 
 	// ========== 批次遷移迴圈 ==========
-	var migratedRows int64 // 已遷移的總行數
-	offset := 0            // 目前讀取的偏移位置
+	offset := 0 // 目前讀取的偏移位置
 
 	// 無限迴圈，直到來源資料讀完為止
 	for {
 		// 檢查是否已取消遷移
 		select {
 		case <-ctx.Done():
+			status = "cancelled"
+			errorMsg = ctx.Err().Error()
 			return ctx.Err()
 		default:
 		}
@@ -375,6 +401,8 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 		// 使用 ORDER BY + OFFSET 分頁讀取，每次讀取 BatchSize 筆
 		rows, err := e.sourceConn.ReadBatch(ctx, table.Schema, table.Name, columns, orderByCol, offset, e.config.BatchSize)
 		if err != nil {
+			status = "failed"
+			errorMsg = fmt.Sprintf("failed to read batch at offset %d: %v", offset, err)
 			return fmt.Errorf("failed to read batch at offset %d: %w", offset, err)
 		}
 
@@ -394,6 +422,8 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 		// COPY 協議比 INSERT 效率高數倍，適合大量資料遷移
 		_, err = e.targetConn.CopyFrom(ctx, table.Schema, table.Name, pgColumns, rows)
 		if err != nil {
+			status = "failed"
+			errorMsg = fmt.Sprintf("failed to insert batch at offset %d: %v", offset, err)
 			return fmt.Errorf("failed to insert batch at offset %d: %w", offset, err)
 		}
 
@@ -431,6 +461,8 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 	}
 
 	// ========== 標記表格遷移完成 ==========
+	status = "completed"
+
 	e.mu.Lock()
 	if ts, ok := e.state.Tables[tableName]; ok {
 		ts.Status = types.MigrationStatusCompleted
@@ -445,7 +477,6 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 		"rowsMigrated": migratedRows,
 	})
 
-	e.logTableProgress(types.LogLevelInfo, fmt.Sprintf("Completed %s: %d rows migrated", tableName, migratedRows), tableName, "completed", table.RowCount, migratedRows, "")
 	return nil
 }
 
@@ -598,7 +629,8 @@ func (e *Engine) log(level types.LogLevel, message string) {
 }
 
 // logTableProgress 記錄表格遷移進度（含狀態、行數等詳細資訊）
-func (e *Engine) logTableProgress(level types.LogLevel, message string, tableName string, status string, totalRows int64, migratedRows int64, errorMsg string) {
+// totalRows 和 migratedRows 為 nil 表示不適用（如 Schema Migration）
+func (e *Engine) logTableProgress(level types.LogLevel, message string, tableName string, status string, totalRows *int64, migratedRows *int64, errorMsg string) {
 	entry := &types.LogEntry{
 		MigrationID:  e.migrationID,
 		Level:        level,
@@ -661,6 +693,10 @@ func (e *Engine) updateProgress() {
 
 // CreateMigrationRecord creates a new migration record
 func (e *Engine) CreateMigrationRecord(name string) (string, error) {
+	// 根據連線字串查詢對應的 connectionId
+	e.config.SourceConnectionID = e.storage.GetConnectionIDByString(e.config.SourceConnectionString)
+	e.config.TargetConnectionID = e.storage.GetConnectionIDByString(e.config.TargetConnectionString)
+
 	// 暫存 IncludeTables，序列化前清空避免重複儲存
 	includeTables := e.config.IncludeTables
 	e.config.IncludeTables = nil

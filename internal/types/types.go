@@ -139,6 +139,8 @@ const (
 
 // MigrationConfig holds configuration for a migration job
 type MigrationConfig struct {
+	SourceConnectionID     string   `json:"sourceConnectionId,omitempty"`     // 來源連線 ID（關聯 connections 表，後端自動查詢）
+	TargetConnectionID     string   `json:"targetConnectionId,omitempty"`     // 目標連線 ID（關聯 connections 表，後端自動查詢）
 	SourceConnectionString string   `json:"sourceConnectionString"`
 	TargetConnectionString string   `json:"targetConnectionString"`
 	SourceDatabase         string   `json:"sourceDatabase"`
@@ -200,10 +202,10 @@ type LogEntry struct {
 	Message      string    `json:"message" db:"message"`
 	TableName    string    `json:"tableName" db:"table_name"`
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
-	Status       string    `json:"status" db:"status"`               // 表格遷移狀態（選填）
-	TotalRows    int64     `json:"totalRows" db:"total_rows"`        // 總行數（選填）
-	MigratedRows int64     `json:"migratedRows" db:"migrated_rows"`  // 已遷移行數（選填）
-	ErrorMessage string    `json:"errorMessage" db:"error_message"`  // 錯誤訊息（選填）
+	Status       string    `json:"status" db:"status"`                // 表格遷移狀態（選填）
+	TotalRows    *int64    `json:"totalRows" db:"total_rows"`         // 總行數（選填，nil 表示不適用）
+	MigratedRows *int64    `json:"migratedRows" db:"migrated_rows"`   // 已遷移行數（選填，nil 表示不適用）
+	ErrorMessage string    `json:"errorMessage" db:"error_message"`   // 錯誤訊息（選填）
 }
 
 // ProgressUpdate represents a real-time progress update

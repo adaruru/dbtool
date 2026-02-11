@@ -310,7 +310,6 @@ export namespace types {
 	    level: string;
 	    message: string;
 	    tableName: string;
-	    details: string;
 	    // Go type: time
 	    createdAt: any;
 	    status: string;
@@ -329,7 +328,6 @@ export namespace types {
 	        this.level = source["level"];
 	        this.message = source["message"];
 	        this.tableName = source["tableName"];
-	        this.details = source["details"];
 	        this.createdAt = this.convertValues(source["createdAt"], null);
 	        this.status = source["status"];
 	        this.totalRows = source["totalRows"];
