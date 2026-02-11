@@ -201,3 +201,15 @@ User approved the plan
 - 實作資料遷移引擎
 - 實作驗證功能
 - 建立前端 UI 元件
+
+讓我分析移除的欄位與 migration_logs 的對應關係：
+
+| 移除的欄位      | 類型 | migration_logs 是否已覆蓋 | 說明                                                    |
+| :-------------- | :--- | :------------------------ | :------------------------------------------------------ |
+| status          | 狀態 | ⚠️ 部分                    | 追加                                                    |
+| total_rows      | 統計 | ✅ 是                      | 追加                                                    |
+| migrated_rows   | 進度 | ✅ 是                      | 追加                                                    |
+| last_checkpoint | 斷點 | ❌ 否                      | 略過                                                    |
+| started_at      | 時間 | ✅ 是                      | 可從 message="Starting migration..." 的 created_at 取得 |
+| completed_at    | 時間 | ✅ 是                      | 略過                                                    |
+| error_message   | 錯誤 | ✅ 是                      | 追加                                                    |

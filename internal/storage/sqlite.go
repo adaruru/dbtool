@@ -101,14 +101,7 @@ func (s *Storage) migrate() error {
 			migration_id TEXT NOT NULL,
 			table_name TEXT NOT NULL,
 			schema_name TEXT,
-			status TEXT NOT NULL,
-			total_rows INTEGER DEFAULT 0,
-			migrated_rows INTEGER DEFAULT 0,
 			migrate_order INTEGER DEFAULT 0,
-			last_checkpoint TEXT,
-			started_at DATETIME,
-			completed_at DATETIME,
-			error_message TEXT,
 			FOREIGN KEY (migration_id) REFERENCES migrations(id)
 		)`,
 		`CREATE TABLE IF NOT EXISTS migration_logs (
@@ -117,7 +110,10 @@ func (s *Storage) migrate() error {
 			level TEXT NOT NULL CHECK (level IN ('debug', 'info', 'warn', 'error')),
 			message TEXT NOT NULL,
 			table_name TEXT,
-			details_json TEXT,
+			status TEXT,
+			total_rows INTEGER,
+			migrated_rows INTEGER,
+			error_message TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (migration_id) REFERENCES migrations(id)
 		)`,
@@ -311,11 +307,11 @@ func (s *Storage) UpdateMigrationProgress(id string, totalTables, completedTable
 // Table migration methods
 
 // CreateTableMigration creates a table migration record
+// 用於記錄 migration 執行時選擇的表格與順序
 func (s *Storage) CreateTableMigration(state *types.TableMigrationState) error {
-	state.Status = types.MigrationStatusPending
 	result, err := s.db.NamedExec(`
-		INSERT INTO migration_tables (migration_id, table_name, schema_name, status, total_rows, migrate_order)
-		VALUES (:migration_id, :table_name, :schema_name, :status, :total_rows, :migrate_order)
+		INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order)
+		VALUES (:migration_id, :table_name, :schema_name, :migrate_order)
 	`, state)
 	if err != nil {
 		return err
@@ -323,42 +319,6 @@ func (s *Storage) CreateTableMigration(state *types.TableMigrationState) error {
 	id, _ := result.LastInsertId()
 	state.ID = id
 	return nil
-}
-
-// UpdateTableMigrationProgress updates table migration progress
-func (s *Storage) UpdateTableMigrationProgress(id int64, migratedRows int64, checkpoint string) error {
-	_, err := s.db.Exec(`
-		UPDATE migration_tables
-		SET migrated_rows = ?, last_checkpoint = ?
-		WHERE id = ?
-	`, migratedRows, checkpoint, id)
-	return err
-}
-
-// UpdateTableMigrationStatus updates table migration status
-func (s *Storage) UpdateTableMigrationStatus(id int64, status types.MigrationStatus, errorMsg string) error {
-	now := time.Now()
-	query := "UPDATE migration_tables SET status = ?"
-	args := []interface{}{status}
-
-	if status == types.MigrationStatusRunning {
-		query += ", started_at = ?"
-		args = append(args, now)
-	} else if status == types.MigrationStatusCompleted || status == types.MigrationStatusFailed {
-		query += ", completed_at = ?"
-		args = append(args, now)
-	}
-
-	if errorMsg != "" {
-		query += ", error_message = ?"
-		args = append(args, errorMsg)
-	}
-
-	query += " WHERE id = ?"
-	args = append(args, id)
-
-	_, err := s.db.Exec(query, args...)
-	return err
 }
 
 // GetTableMigrations retrieves table migrations for a migration
@@ -374,8 +334,8 @@ func (s *Storage) GetTableMigrations(migrationID string) ([]types.TableMigration
 func (s *Storage) AddLog(entry *types.LogEntry) error {
 	entry.CreatedAt = time.Now()
 	_, err := s.db.NamedExec(`
-		INSERT INTO migration_logs (migration_id, level, message, table_name, details_json, created_at)
-		VALUES (:migration_id, :level, :message, :table_name, :details_json, :created_at)
+		INSERT INTO migration_logs (migration_id, level, message, table_name, status, total_rows, migrated_rows, error_message, created_at)
+		VALUES (:migration_id, :level, :message, :table_name, :status, :total_rows, :migrated_rows, :error_message, :created_at)
 	`, entry)
 	return err
 }

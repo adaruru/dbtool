@@ -297,7 +297,8 @@ func (e *Engine) migrateData(ctx context.Context, tables []types.TableInfo) erro
 		e.checkPaused()
 
 		if err := e.migrateTableData(ctx, table); err != nil {
-			e.log(types.LogLevelError, fmt.Sprintf("Failed to migrate data for %s.%s: %v", table.Schema, table.Name, err))
+			tableName := fmt.Sprintf("%s.%s", table.Schema, table.Name)
+			e.logTableProgress(types.LogLevelError, fmt.Sprintf("Failed to migrate data for %s: %v", tableName, err), tableName, "failed", table.RowCount, 0, err.Error())
 			// Continue with other tables
 		}
 
@@ -314,7 +315,7 @@ func (e *Engine) migrateData(ctx context.Context, tables []types.TableInfo) erro
 // migrateTableData migrates data for a single table
 func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) error {
 	tableName := fmt.Sprintf("%s.%s", table.Schema, table.Name)
-	e.log(types.LogLevelInfo, fmt.Sprintf("Migrating data for %s (%d rows)", tableName, table.RowCount))
+	e.logTableProgress(types.LogLevelInfo, fmt.Sprintf("Migrating data for %s (%d rows)", tableName, table.RowCount), tableName, "running", table.RowCount, 0, "")
 
 	e.mu.Lock()
 	e.state.CurrentTable = tableName
@@ -444,7 +445,7 @@ func (e *Engine) migrateTableData(ctx context.Context, table types.TableInfo) er
 		"rowsMigrated": migratedRows,
 	})
 
-	e.log(types.LogLevelInfo, fmt.Sprintf("Completed %s: %d rows migrated", tableName, migratedRows))
+	e.logTableProgress(types.LogLevelInfo, fmt.Sprintf("Completed %s: %d rows migrated", tableName, migratedRows), tableName, "completed", table.RowCount, migratedRows, "")
 	return nil
 }
 
@@ -593,6 +594,33 @@ func (e *Engine) log(level types.LogLevel, message string) {
 		"level":       string(level),
 		"message":     message,
 		"timestamp":   time.Now().Format(time.RFC3339),
+	})
+}
+
+// logTableProgress 記錄表格遷移進度（含狀態、行數等詳細資訊）
+func (e *Engine) logTableProgress(level types.LogLevel, message string, tableName string, status string, totalRows int64, migratedRows int64, errorMsg string) {
+	entry := &types.LogEntry{
+		MigrationID:  e.migrationID,
+		Level:        level,
+		Message:      message,
+		TableName:    tableName,
+		Status:       status,
+		TotalRows:    totalRows,
+		MigratedRows: migratedRows,
+		ErrorMessage: errorMsg,
+	}
+	e.storage.AddLog(entry)
+
+	e.emitEvent("migration:log", map[string]interface{}{
+		"migrationId":  e.migrationID,
+		"level":        string(level),
+		"message":      message,
+		"tableName":    tableName,
+		"status":       status,
+		"totalRows":    totalRows,
+		"migratedRows": migratedRows,
+		"errorMessage": errorMsg,
+		"timestamp":    time.Now().Format(time.RFC3339),
 	})
 }
 

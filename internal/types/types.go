@@ -172,20 +172,14 @@ type MigrationRecord struct {
 	MigratedRows    int64           `json:"migratedRows" db:"migrated_rows"`
 }
 
-// TableMigrationState represents the migration state of a single table
+// TableMigrationState represents the migration config of a single table
+// 用於還原特定 migration 執行時選擇的表格與順序
 type TableMigrationState struct {
-	ID             int64           `json:"id" db:"id"`
-	MigrationID    string          `json:"migrationId" db:"migration_id"`
-	TableName      string          `json:"tableName" db:"table_name"`
-	SchemaName     string          `json:"schemaName" db:"schema_name"`
-	Status         MigrationStatus `json:"status" db:"status"`
-	TotalRows      int64           `json:"totalRows" db:"total_rows"`
-	MigratedRows   int64           `json:"migratedRows" db:"migrated_rows"`
-	MigrateOrder   int             `json:"migrateOrder" db:"migrate_order"`
-	LastCheckpoint string          `json:"lastCheckpoint" db:"last_checkpoint"` // JSON
-	StartedAt      *time.Time      `json:"startedAt" db:"started_at"`
-	CompletedAt    *time.Time      `json:"completedAt" db:"completed_at"`
-	ErrorMessage   string          `json:"errorMessage" db:"error_message"`
+	ID           int64  `json:"id" db:"id"`
+	MigrationID  string `json:"migrationId" db:"migration_id"`
+	TableName    string `json:"tableName" db:"table_name"`
+	SchemaName   string `json:"schemaName" db:"schema_name"`
+	MigrateOrder int    `json:"migrateOrder" db:"migrate_order"`
 }
 
 // LogLevel represents the log level
@@ -200,13 +194,16 @@ const (
 
 // LogEntry represents a log entry
 type LogEntry struct {
-	ID          int64     `json:"id" db:"id"`
-	MigrationID string    `json:"migrationId" db:"migration_id"`
-	Level       LogLevel  `json:"level" db:"level"`
-	Message     string    `json:"message" db:"message"`
-	TableName   string    `json:"tableName" db:"table_name"`
-	Details     string    `json:"details" db:"details_json"` // JSON
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	ID           int64     `json:"id" db:"id"`
+	MigrationID  string    `json:"migrationId" db:"migration_id"`
+	Level        LogLevel  `json:"level" db:"level"`
+	Message      string    `json:"message" db:"message"`
+	TableName    string    `json:"tableName" db:"table_name"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+	Status       string    `json:"status" db:"status"`               // 表格遷移狀態（選填）
+	TotalRows    int64     `json:"totalRows" db:"total_rows"`        // 總行數（選填）
+	MigratedRows int64     `json:"migratedRows" db:"migrated_rows"`  // 已遷移行數（選填）
+	ErrorMessage string    `json:"errorMessage" db:"error_message"`  // 錯誤訊息（選填）
 }
 
 // ProgressUpdate represents a real-time progress update

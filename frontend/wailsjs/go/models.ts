@@ -313,6 +313,10 @@ export namespace types {
 	    details: string;
 	    // Go type: time
 	    createdAt: any;
+	    status: string;
+	    totalRows: number;
+	    migratedRows: number;
+	    errorMessage: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new LogEntry(source);
@@ -327,6 +331,10 @@ export namespace types {
 	        this.tableName = source["tableName"];
 	        this.details = source["details"];
 	        this.createdAt = this.convertValues(source["createdAt"], null);
+	        this.status = source["status"];
+	        this.totalRows = source["totalRows"];
+	        this.migratedRows = source["migratedRows"];
+	        this.errorMessage = source["errorMessage"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
