@@ -20,6 +20,13 @@ type MSSQLConnection struct {
 
 // NewMSSQLConnection creates a new MSSQL connection
 func NewMSSQLConnection(connString string) *MSSQLConnection {
+	// When TrustServerCertificate=True is set but encrypt is not specified,
+	// add encrypt=disable to avoid TLS handshake failures with older SQL Server
+	// certificates (e.g. x509: negative serial number).
+	lower := strings.ToLower(connString)
+	if strings.Contains(lower, "trustservercertificate=true") && !strings.Contains(lower, "encrypt=") {
+		connString = connString + ";encrypt=disable"
+	}
 	return &MSSQLConnection{
 		connString: connString,
 	}
