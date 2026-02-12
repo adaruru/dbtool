@@ -96,7 +96,7 @@ func (tm *TypeMapper) MapType(col types.ColumnInfo) string {
 		return "TIME"
 
 	case "datetime":
-		return "TIMESTAMP(3)"
+		return "TIMESTAMPTZ(3)"
 
 	case "datetime2":
 		precision := col.Scale
@@ -105,10 +105,10 @@ func (tm *TypeMapper) MapType(col types.ColumnInfo) string {
 				fmt.Sprintf("Column %s: datetime2(%d) precision truncated to 6 (PostgreSQL max)", col.Name, precision))
 			precision = 6
 		}
-		return fmt.Sprintf("TIMESTAMP(%d)", precision)
+		return fmt.Sprintf("TIMESTAMPTZ(%d)", precision)
 
 	case "smalldatetime":
-		return "TIMESTAMP(0)"
+		return "TIMESTAMPTZ(0)"
 
 	case "datetimeoffset":
 		precision := col.Scale
