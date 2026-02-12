@@ -252,20 +252,10 @@ func (e *Engine) migrateSchema(ctx context.Context, tables []types.TableInfo) er
 
 		// Generate and execute CREATE TABLE
 		createDDL := e.typeMapper.GenerateCreateTableDDL(*tableDetails)
+		e.log(types.LogLevelInfo, fmt.Sprintf("DDL for %s:\n%s", tableName, createDDL))
 		if err := e.targetConn.ExecuteDDL(ctx, createDDL); err != nil {
-			e.logTableProgress(types.LogLevelError, fmt.Sprintf("Failed to create table %s: %v", tableName, err), tableName, "failed", nil, nil, err.Error())
-			// 寫入有問題的 DDL 到本地 log 以便除錯（與 app.go 相同：~/.adaru-db-tool/、日期檔名）
-			if homeDir, e := os.UserHomeDir(); e == nil {
-				logDir := filepath.Join(homeDir, ".adaru-db-tool")
-				os.MkdirAll(logDir, 0755)
-				today := time.Now().Format("2006-01-02")
-				logPath := filepath.Join(logDir, fmt.Sprintf("create_failed_%s.log", today))
-				if f, openErr := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); openErr == nil {
-					f.WriteString(fmt.Sprintf("[%s] table=%s err=%v\n--- DDL ---\n%s\n--- END DDL ---\n",
-						time.Now().Format("2006-01-02 15:04:05"), tableName, err, createDDL))
-					f.Close()
-				}
-			}
+			e.logTableProgress(types.LogLevelError, fmt.Sprintf("Failed to create table %s: %v\nDDL:\n%s", tableName, err, createDDL), tableName, "failed", nil, nil, err.Error())
+			e.writeFailedDDLLog(tableName, err, createDDL)
 			continue
 		}
 
@@ -640,6 +630,25 @@ func (e *Engine) log(level types.LogLevel, message string) {
 		"message":     message,
 		"timestamp":   time.Now().Format(time.RFC3339),
 	})
+}
+
+// writeFailedDDLLog 將失敗的 DDL 寫入本地檔案以便除錯
+func (e *Engine) writeFailedDDLLog(tableName string, ddlErr error, ddl string) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	logDir := filepath.Join(homeDir, ".adaru-db-tool")
+	os.MkdirAll(logDir, 0755)
+	today := time.Now().Format("2006-01-02")
+	logPath := filepath.Join(logDir, fmt.Sprintf("create_failed_%s.log", today))
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, "[%s] table=%s err=%v\n--- DDL ---\n%s\n--- END DDL ---\n\n",
+		time.Now().Format("2006-01-02 15:04:05"), tableName, ddlErr, ddl)
 }
 
 // logTableProgress 記錄表格遷移進度（含狀態、行數等詳細資訊）
