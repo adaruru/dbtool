@@ -281,7 +281,7 @@ CREATE DATABASE "LineCRM.CarCare1"
 ### 實際 export
 
 ProductPlans	dbo	0
-Tags	dbo	1  `failed`		
+Tags	dbo	1 
 CarVenders	dbo	2
 CarColors	dbo	3
 OilsCarVenders	dbo	4
@@ -311,9 +311,9 @@ SalesDatas	dbo	27
 StoreAccounts	dbo	28
 StoreCustomerCars	dbo	29
 StoreRelationTags	dbo	30
-StoreTags	dbo	31  `failed`		
+StoreTags	dbo	31 	
 Items	dbo	32
-ItemCategoryTags	dbo	33  `failed`		
+ItemCategoryTags	dbo	33
 Reservations	dbo	34
 CrmStoreVisits	dbo	35
 Oils	dbo	36
@@ -331,6 +331,64 @@ SalesBonusRates	dbo	47
 SerialNumbers	dbo	48
 Workingdays	dbo	49
 ApprovalDatas	dbo	50
+
+### Order script
+
+```sqlite
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'ProductPlans', 'dbo', 0);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Tags', 'dbo', 1);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'CarVenders', 'dbo', 2);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'CarColors', 'dbo', 3);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'OilsCarVenders', 'dbo', 4);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Menus', 'dbo', 5);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Roles', 'dbo', 6);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'CarModels', 'dbo', 7);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'OilsCarModels', 'dbo', 8);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'CrmStores', 'dbo', 9);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Departments', 'dbo', 10);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Users', 'dbo', 11);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'ActionLog', 'dbo', 12);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Agents', 'dbo', 13);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'UserRoles', 'dbo', 14);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'RoleMenus', 'dbo', 15);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Stores', 'dbo', 16);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'OilsCarYears', 'dbo', 17);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'RoleMenuDetails', 'dbo', 18);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'MenuDetails', 'dbo', 19);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Customers', 'dbo', 20);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'DeductionDatas', 'dbo', 21);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Invoices', 'dbo', 22);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'ItemCategories', 'dbo', 23);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'MarketingTemplates', 'dbo', 24);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'NextReservations', 'dbo', 25);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'PlanHistories', 'dbo', 26);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'SalesDatas', 'dbo', 27);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'StoreAccounts', 'dbo', 28);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'StoreCustomerCars', 'dbo', 29);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'StoreRelationTags', 'dbo', 30);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'StoreTags', 'dbo', 31);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Items', 'dbo', 32);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'ItemCategoryTags', 'dbo', 33);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Reservations', 'dbo', 34);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'CrmStoreVisits', 'dbo', 35);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Oils', 'dbo', 36);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'CustomerCarTags', 'dbo', 37);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'WorkOrders', 'dbo', 38);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'WorkOrderDetails', 'dbo', 39);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'BatchLogs', 'dbo', 40);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Coupons', 'dbo', 41);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'CustomerCoupons', 'dbo', 42);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'NotifyHistory', 'dbo', 43);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'NotifySettings', 'dbo', 44);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'ReservationSettings', 'dbo', 45);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'ReservationStatus', 'dbo', 46);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'SalesBonusRates', 'dbo', 47);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'SerialNumbers', 'dbo', 48);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'Workingdays', 'dbo', 49);
+INSERT INTO migration_tables (migration_id, table_name, schema_name, migrate_order) VALUES('e45358cf-7f05-41a4-81e8-73c7560ce5d4', 'ApprovalDatas', 'dbo', 50);
+```
+
+
 
 ### Fail 彙總
 
